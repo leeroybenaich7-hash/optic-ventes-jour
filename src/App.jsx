@@ -2,26 +2,37 @@ import React, { useState } from 'react'
 import {
   LayoutDashboard,
   Send,
+  BadgeEuro,
   Wallet,
   CalendarDays,
   Settings,
   AlertTriangle,
   CheckCircle2,
+  Search,
+  X,
 } from 'lucide-react'
-import { useStore, pendingTeletrans, pendingDue } from './lib/store.jsx'
+import {
+  useStore,
+  pendingFacture,
+  pendingMutuellePaid,
+  pendingDue,
+} from './lib/store.jsx'
 import { fmtDay, today } from './lib/format.js'
 import { APP_VERSION } from './lib/config.js'
 import Lockscreen from './components/Lockscreen.jsx'
 import Dashboard from './components/Dashboard.jsx'
-import Teletrans from './components/Teletrans.jsx'
+import AFacturer from './components/AFacturer.jsx'
+import PaiementsMutuelle from './components/PaiementsMutuelle.jsx'
 import Encaissements from './components/Encaissements.jsx'
 import Historique from './components/Historique.jsx'
 import Reglages from './components/Reglages.jsx'
+import Recherche from './components/Recherche.jsx'
 
 const TABS = [
   { id: 'jour', label: 'Ventes du jour', icon: LayoutDashboard },
-  { id: 'teletrans', label: 'À facturer', icon: Send },
-  { id: 'encaisser', label: 'Reste à charge', icon: Wallet },
+  { id: 'facturer', label: 'À facturer', icon: Send },
+  { id: 'paiements', label: 'Paiements mutuelle', icon: BadgeEuro },
+  { id: 'reste', label: 'Reste à charge', icon: Wallet },
   { id: 'historique', label: 'Historique', icon: CalendarDays },
   { id: 'reglages', label: 'Réglages', icon: Settings },
 ]
@@ -29,12 +40,19 @@ const TABS = [
 export default function App() {
   const { ready, unlocked, sales, toast, online } = useStore()
   const [tab, setTab] = useState('jour')
+  const [search, setSearch] = useState('')
 
   if (!ready) return null
   if (!unlocked) return <Lockscreen />
 
-  const nbTeletrans = pendingTeletrans(sales).length
+  const searching = search.trim().length > 0
+
+  const nbFacturer = pendingFacture(sales).length
+  const nbPaiements = pendingMutuellePaid(sales).length
   const nbDue = pendingDue(sales).length
+
+  const badgeFor = (id) =>
+    id === 'facturer' ? nbFacturer : id === 'paiements' ? nbPaiements : id === 'reste' ? nbDue : 0
 
   return (
     <div>
@@ -44,20 +62,33 @@ export default function App() {
             <span className="brand-name">Optic City</span>
             <span className="brand-sub">Ventes du jour</span>
           </div>
+          <div className="topbar-search">
+            <Search className="lucide" size={16} />
+            <input
+              className="topbar-search-input"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher un client…"
+              aria-label="Rechercher un client"
+            />
+            {searching && (
+              <button type="button" className="topbar-search-x" onClick={() => setSearch('')} aria-label="Effacer la recherche">
+                <X className="lucide" size={15} />
+              </button>
+            )}
+          </div>
           <span className="topbar-date">{fmtDay(today())}</span>
         </div>
         <div className="sunset-rule" />
         <div className="wrap ribbon">
           <button
             type="button"
-            className={'ribbon-item ' + (nbTeletrans ? 'alert' : 'calm')}
-            onClick={() => setTab('teletrans')}
+            className={'ribbon-item ' + (nbFacturer ? 'alert' : 'calm')}
+            onClick={() => setTab('facturer')}
           >
-            {nbTeletrans ? <AlertTriangle className="lucide" size={15} /> : <CheckCircle2 className="lucide" size={15} />}
-            {nbTeletrans ? (
-              <span>
-                <strong>{nbTeletrans}</strong> facture{nbTeletrans > 1 ? 's' : ''} mutuelle à faire
-              </span>
+            {nbFacturer ? <AlertTriangle className="lucide" size={15} /> : <CheckCircle2 className="lucide" size={15} />}
+            {nbFacturer ? (
+              <span><strong>{nbFacturer}</strong> à facturer</span>
             ) : (
               <span>Facturation à jour</span>
             )}
@@ -65,14 +96,21 @@ export default function App() {
           <span className="ribbon-sep" />
           <button
             type="button"
+            className={'ribbon-item ' + (nbPaiements ? 'wait-txt' : 'calm')}
+            onClick={() => setTab('paiements')}
+          >
+            <BadgeEuro className="lucide" size={15} />
+            <span><strong>{nbPaiements}</strong> paiement{nbPaiements > 1 ? 's' : ''} mutuelle en attente</span>
+          </button>
+          <span className="ribbon-sep" />
+          <button
+            type="button"
             className={'ribbon-item ' + (nbDue ? 'alert' : 'calm')}
-            onClick={() => setTab('encaisser')}
+            onClick={() => setTab('reste')}
           >
             {nbDue ? <AlertTriangle className="lucide" size={15} /> : <CheckCircle2 className="lucide" size={15} />}
             {nbDue ? (
-              <span>
-                <strong>{nbDue}</strong> reste{nbDue > 1 ? 's' : ''} à charge à encaisser
-              </span>
+              <span><strong>{nbDue}</strong> reste{nbDue > 1 ? 's' : ''} à charge</span>
             ) : (
               <span>Tout est encaissé</span>
             )}
@@ -86,8 +124,7 @@ export default function App() {
           <nav className="tabs">
             {TABS.map((t) => {
               const Icon = t.icon
-              const count =
-                t.id === 'teletrans' ? nbTeletrans : t.id === 'encaisser' ? nbDue : 0
+              const count = badgeFor(t.id)
               return (
                 <button
                   key={t.id}
@@ -106,11 +143,18 @@ export default function App() {
       </header>
 
       <main className="wrap main">
-        {tab === 'jour' && <Dashboard />}
-        {tab === 'teletrans' && <Teletrans />}
-        {tab === 'encaisser' && <Encaissements />}
-        {tab === 'historique' && <Historique />}
-        {tab === 'reglages' && <Reglages />}
+        {searching ? (
+          <Recherche query={search.trim()} />
+        ) : (
+          <>
+            {tab === 'jour' && <Dashboard />}
+            {tab === 'facturer' && <AFacturer />}
+            {tab === 'paiements' && <PaiementsMutuelle />}
+            {tab === 'reste' && <Encaissements />}
+            {tab === 'historique' && <Historique />}
+            {tab === 'reglages' && <Reglages />}
+          </>
+        )}
       </main>
 
       <footer className="wrap small muted" style={{ paddingBottom: 24 }}>

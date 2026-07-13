@@ -2,7 +2,7 @@
 // formulaire de saisie et liste des ventes de la journée.
 import React from 'react'
 import { Wallet } from 'lucide-react'
-import { useStore, paidOf, dueOf, salesOfDay } from '../lib/store.jsx'
+import { useStore, dueOf, salesOfDay, hasLunettes, hasLentilles } from '../lib/store.jsx'
 import { euro, today } from '../lib/format.js'
 import SaleForm from './SaleForm.jsx'
 import SalesTable from './SalesTable.jsx'
@@ -40,10 +40,10 @@ export default function Dashboard() {
 
   // ----- compteurs du jour -----
   const caTotal = ventes.reduce((s, v) => s + (Number(v.price) || 0), 0)
-  const lunettes = ventes.filter((v) => v.type === 'lunettes')
-  const lentilles = ventes.filter((v) => v.type === 'lentilles')
-  const caLunettes = lunettes.reduce((s, v) => s + (Number(v.price) || 0), 0)
-  const caLentilles = lentilles.reduce((s, v) => s + (Number(v.price) || 0), 0)
+  const lunettes = ventes.filter(hasLunettes)
+  const lentilles = ventes.filter(hasLentilles)
+  const caLunettes = ventes.reduce((s, v) => s + (Number(v.lunettes_montant) || 0), 0)
+  const caLentilles = ventes.reduce((s, v) => s + (Number(v.lentilles_montant) || 0), 0)
   const partMutuelle = ventes.reduce((s, v) => s + (Number(v.mutuelle) || 0), 0)
   const resteCharge = ventes.reduce((s, v) => s + (Number(v.reste) || 0), 0)
 

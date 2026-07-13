@@ -2,7 +2,7 @@
 // Rien ne disparaît de cette liste tant que le client n'a pas tout payé.
 import React, { useMemo, useState } from 'react'
 import { Wallet, ChevronDown, ChevronUp, CheckCircle2, X } from 'lucide-react'
-import { useStore, paidOf, dueOf, pendingDue } from '../lib/store.jsx'
+import { useStore, paidOf, dueOf, pendingDue, hasLunettes, hasLentilles } from '../lib/store.jsx'
 import { euro, today, fmtDay, fmtTime, daysAgo, parseEuro } from '../lib/format.js'
 
 export default function Encaissements() {
@@ -44,7 +44,7 @@ export default function Encaissements() {
                   <tr>
                     <th>Date</th>
                     <th>Client</th>
-                    <th>Type</th>
+                    <th>Postes</th>
                     <th className="num">Prix</th>
                     <th className="num">Déjà payé</th>
                     <th className="num">Reste dû</th>
@@ -116,11 +116,11 @@ function SaleRow({ sale, open, onToggle, onEncaisser }) {
         </td>
         <td>{sale.client}</td>
         <td>
-          {sale.type === 'lentilles' ? (
-            <span className="pill pill-teal">Lentilles</span>
-          ) : (
-            <span className="pill pill-type">Lunettes</span>
-          )}
+          <span className="row" style={{ gap: 4, flexWrap: 'wrap' }}>
+            {hasLunettes(sale) && <span className="pill pill-type">Lunettes</span>}
+            {hasLentilles(sale) && <span className="pill pill-teal">Lentilles</span>}
+            {!hasLunettes(sale) && !hasLentilles(sale) && <span className="muted">—</span>}
+          </span>
         </td>
         <td className="num">{euro(sale.price)}</td>
         <td className="num">{euro(paidOf(sale))}</td>

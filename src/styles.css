@@ -86,8 +86,31 @@ input, select, textarea { font-family: inherit; }
   font-size: 11px; text-transform: uppercase; letter-spacing: .18em;
   color: var(--muted);
 }
-.topbar-date {
+.topbar-search {
   margin-left: auto;
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--panel-2);
+  min-width: 240px;
+}
+.topbar-search:focus-within {
+  border-color: var(--accent-line);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.topbar-search .lucide { color: var(--muted); flex: none; }
+.topbar-search-input {
+  border: none; background: none; outline: none;
+  font-size: 14.5px; color: var(--txt); width: 100%;
+}
+.topbar-search-x {
+  display: inline-flex; padding: 2px; border: none; border-radius: 999px;
+  background: none; color: var(--muted); flex: none;
+}
+.topbar-search-x:hover { background: var(--panel-hi); color: var(--txt); }
+
+.topbar-date {
   font-family: var(--serif); font-style: italic;
   font-size: 17px; color: var(--muted);
   text-transform: capitalize;
@@ -110,6 +133,7 @@ input, select, textarea { font-family: inherit; }
 .ribbon-item:hover { background: var(--panel-hi); }
 .ribbon-item strong { font-weight: 600; }
 .ribbon-item.alert { color: var(--red); }
+.ribbon-item.wait-txt { color: var(--wait); }
 .ribbon-item.calm { color: var(--muted); }
 .ribbon-sep { width: 1px; height: 16px; background: var(--line-strong); }
 
@@ -227,6 +251,56 @@ input, select, textarea { font-family: inherit; }
 }
 .seg-btn.big { padding: 13px 22px; font-size: 16px; }
 .seg-btn .lucide { width: 17px; height: 17px; }
+
+/* étiquettes de mutuelles (réglages) */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 6px 5px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 13.5px;
+}
+.chip-x {
+  display: inline-flex; padding: 3px; border: none; border-radius: 999px;
+  background: none; color: var(--muted);
+}
+.chip-x:hover { background: var(--no-soft); color: var(--red); }
+
+/* postes lunettes / lentilles dans le formulaire */
+.poste {
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  padding: 14px 15px;
+  background: var(--panel-2);
+}
+.poste-head {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--serif); font-size: 18px; font-weight: 600;
+  margin-bottom: 10px;
+}
+.poste-head .lucide { color: var(--accent); }
+
+/* bloc récap calculé (total / reste / mutuelle) */
+.recap {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  background: var(--accent-soft);
+  border-radius: 13px; padding: 12px 15px;
+}
+.recap > div { display: flex; flex-direction: column; gap: 2px; }
+.recap-lbl {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .12em;
+  color: var(--muted); font-weight: 600;
+}
+.recap-val {
+  font-family: var(--serif); font-size: 22px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 560px) {
+  .recap { grid-template-columns: 1fr; gap: 6px; }
+  .recap > div { flex-direction: row; justify-content: space-between; align-items: baseline; }
+}
 
 /* case à cocher stylée */
 .check {
@@ -384,6 +458,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
   .wrap { padding: 0 16px; }
   .kpi-value { font-size: 27px; }
   .topbar-date { display: none; }
+  .topbar-search { min-width: 0; flex: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {

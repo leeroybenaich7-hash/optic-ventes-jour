@@ -17,6 +17,7 @@ import React, {
 } from 'react'
 import { supabase } from './supabase.js'
 import { today, uid } from './format.js'
+import { MUTUELLES_DEPART } from './mutuelles.js'
 
 const LS_SALES = 'ocvj_sales'
 const LS_SETTINGS = 'ocvj_settings'
@@ -25,27 +26,32 @@ const LS_UNLOCKED = 'ocvj_unlocked'
 export const DEFAULT_SETTINGS = {
   vendors: ['Maman', 'Binesa', 'Nadia'],
   methods: ['CB', 'Espèces', 'Chèque', 'Virement'],
-  plateformes: ['Viamedis', 'Almerys', 'Carte Blanche', 'Itelis', 'Santéclair', 'Kalixia', 'Autre'],
+  // Plateformes de tiers payant (les « portails » sur lesquels on facture)
+  plateformes: ['Viamedis', 'Almerys', 'Santéclair', 'Itelis', 'Carte Blanche', 'Kalixia', 'Sévéane', 'Actil'],
+  // Référencement : quelle mutuelle passe par quelle plateforme.
+  // Liste de départ « à vérifier » — modifiable dans Réglages.
+  mutuelles: MUTUELLES_DEPART,
   accessCode: '1234',
 }
 
 /*
 Forme d'une vente :
 {
-  id: string,
-  day: 'YYYY-MM-DD',          // journée de la vente
-  created_at: ISO,            // heure de saisie
-  client: string,
-  type: 'lunettes' | 'lentilles',
-  price: number,              // prix total
-  mutuelle: number,           // part mutuelle
-  mutuelle_nom: string,       // nom de la mutuelle (obligatoire si part mutuelle > 0)
-  plateforme: string,         // plateforme tiers payant (obligatoire si part mutuelle > 0)
-  reste: number,              // reste à charge client
-  vendor: string,
-  teletrans: boolean,         // facturation mutuelle faite ?
-  teletrans_at: ISO | null,
-  payments: [{ id, at: ISO, amount: number, method: string }],
+  id, day:'YYYY-MM-DD', created_at:ISO,
+  client,
+  // Deux postes, chacun optionnel (un client peut prendre les deux) :
+  lunettes_montant, lunettes_reste,     // € vendus / reste à charge client
+  lentilles_montant, lentilles_reste,
+  // Totaux calculés et stockés à l'enregistrement :
+  price,        // = lunettes_montant + lentilles_montant
+  reste,        // = lunettes_reste + lentilles_reste (reste à charge total)
+  mutuelle,     // = price - reste (part prise en charge par la mutuelle)
+  mutuelle_nom, // organisme (ex. Harmonie Mutuelle)
+  plateforme,   // tiers payant sur lequel on facture (ex. Viamedis)
+  vendor,
+  facture:bool, facture_at,           // étape 2 : dossier facturé (envoyé)
+  mutuelle_paid:bool, mutuelle_paid_at, // étape 3 : mutuelle a payé (pointé)
+  payments:[{ id, at:ISO, amount, method }], // encaissements du reste à charge
 }
 */
 
@@ -56,9 +62,23 @@ export function paidOf(sale) {
 export function dueOf(sale) {
   return Math.max(0, Math.round(((Number(sale.reste) || 0) - paidOf(sale)) * 100) / 100)
 }
-export function pendingTeletrans(sales) {
-  return sales.filter((s) => !s.teletrans && (Number(s.mutuelle) || 0) > 0)
+export function hasLunettes(sale) {
+  return (Number(sale.lunettes_montant) || 0) > 0
 }
+export function hasLentilles(sale) {
+  return (Number(sale.lentilles_montant) || 0) > 0
+}
+// étape 2 : à facturer = part mutuelle due mais pas encore facturée
+export function pendingFacture(sales) {
+  return sales.filter((s) => (Number(s.mutuelle) || 0) > 0 && !s.facture)
+}
+// étape 3 : facturé mais mutuelle pas encore payée
+export function pendingMutuellePaid(sales) {
+  return sales.filter(
+    (s) => (Number(s.mutuelle) || 0) > 0 && s.facture && !s.mutuelle_paid
+  )
+}
+// reste à charge client non soldé
 export function pendingDue(sales) {
   return sales.filter((s) => dueOf(s) > 0)
 }
@@ -88,14 +108,12 @@ export function StoreProvider({ children }) {
   const toastTimer = useRef(null)
   const online = !!supabase
 
-  // ----- toast global -----
   const notify = useCallback((msg) => {
     setToast(msg)
     clearTimeout(toastTimer.current)
     toastTimer.current = setTimeout(() => setToast(null), 2600)
   }, [])
 
-  // ----- chargement initial -----
   const loadAll = useCallback(async () => {
     if (supabase) {
       const [v, r] = await Promise.all([
@@ -105,7 +123,7 @@ export function StoreProvider({ children }) {
       if (!v.error) setSales(v.data.map(rowToSale))
       if (!r.error && r.data?.data) setSettings({ ...DEFAULT_SETTINGS, ...r.data.data })
     } else {
-      setSales(readLS(LS_SALES, []))
+      setSales(readLS(LS_SALES, []).map(normalizeSale))
       setSettings({ ...DEFAULT_SETTINGS, ...readLS(LS_SETTINGS, {}) })
     }
     setReady(true)
@@ -115,7 +133,6 @@ export function StoreProvider({ children }) {
     loadAll()
   }, [loadAll])
 
-  // ----- temps réel (Supabase uniquement) -----
   useEffect(() => {
     if (!supabase) return
     const ch = supabase
@@ -126,7 +143,6 @@ export function StoreProvider({ children }) {
     return () => supabase.removeChannel(ch)
   }, [loadAll])
 
-  // ----- persistance locale -----
   useEffect(() => {
     if (ready && !supabase) localStorage.setItem(LS_SALES, JSON.stringify(sales))
   }, [sales, ready])
@@ -134,7 +150,6 @@ export function StoreProvider({ children }) {
     if (ready && !supabase) localStorage.setItem(LS_SETTINGS, JSON.stringify(settings))
   }, [settings, ready])
 
-  // ----- écritures -----
   const persistSale = useCallback(async (sale) => {
     if (!supabase) return
     const { error } = await supabase.from('ventes').upsert(saleToRow(sale))
@@ -143,20 +158,32 @@ export function StoreProvider({ children }) {
 
   const addSale = useCallback(
     (data) => {
+      const lm = Number(data.lunettes_montant) || 0
+      const lr = Number(data.lunettes_reste) || 0
+      const ltm = Number(data.lentilles_montant) || 0
+      const ltr = Number(data.lentilles_reste) || 0
+      const price = Math.round((lm + ltm) * 100) / 100
+      const reste = Math.round((lr + ltr) * 100) / 100
+      const mutuelle = Math.max(0, Math.round((price - reste) * 100) / 100)
       const sale = {
         id: uid(),
         day: today(),
         created_at: new Date().toISOString(),
         client: data.client?.trim() || 'Client',
-        type: data.type,
-        price: Number(data.price) || 0,
-        mutuelle: Number(data.mutuelle) || 0,
-        mutuelle_nom: data.mutuelle_nom?.trim() || '',
-        plateforme: data.plateforme || '',
-        reste: Number(data.reste) || 0,
+        lunettes_montant: lm,
+        lunettes_reste: lr,
+        lentilles_montant: ltm,
+        lentilles_reste: ltr,
+        price,
+        reste,
+        mutuelle,
+        mutuelle_nom: mutuelle > 0 ? (data.mutuelle_nom?.trim() || '') : '',
+        plateforme: mutuelle > 0 ? (data.plateforme || '') : '',
         vendor: data.vendor || '',
-        teletrans: !!data.teletrans,
-        teletrans_at: data.teletrans ? new Date().toISOString() : null,
+        facture: mutuelle > 0 ? !!data.facture : false,
+        facture_at: mutuelle > 0 && data.facture ? new Date().toISOString() : null,
+        mutuelle_paid: false,
+        mutuelle_paid_at: null,
         payments: data.payments || [],
       }
       setSales((prev) => [sale, ...prev])
@@ -171,7 +198,7 @@ export function StoreProvider({ children }) {
       setSales((prev) =>
         prev.map((s) => {
           if (s.id !== id) return s
-          const next = { ...s, ...patch }
+          const next = recompute({ ...s, ...patch })
           persistSale(next)
           return next
         })
@@ -180,13 +207,10 @@ export function StoreProvider({ children }) {
     [persistSale]
   )
 
-  const deleteSale = useCallback(
-    async (id) => {
-      setSales((prev) => prev.filter((s) => s.id !== id))
-      if (supabase) await supabase.from('ventes').delete().eq('id', id)
-    },
-    []
-  )
+  const deleteSale = useCallback(async (id) => {
+    setSales((prev) => prev.filter((s) => s.id !== id))
+    if (supabase) await supabase.from('ventes').delete().eq('id', id)
+  }, [])
 
   const addPayment = useCallback(
     (saleId, { amount, method }) => {
@@ -208,9 +232,20 @@ export function StoreProvider({ children }) {
     [persistSale]
   )
 
-  const markTeletrans = useCallback(
+  // étape 2 : marquer facturé / défaire
+  const markFacture = useCallback(
     (id, done = true) => {
-      updateSale(id, { teletrans: done, teletrans_at: done ? new Date().toISOString() : null })
+      updateSale(id, { facture: done, facture_at: done ? new Date().toISOString() : null })
+    },
+    [updateSale]
+  )
+  // étape 3 : marquer payé par la mutuelle / défaire
+  const markMutuellePaid = useCallback(
+    (id, done = true) => {
+      updateSale(id, {
+        mutuelle_paid: done,
+        mutuelle_paid_at: done ? new Date().toISOString() : null,
+      })
     },
     [updateSale]
   )
@@ -249,7 +284,8 @@ export function StoreProvider({ children }) {
     updateSale,
     deleteSale,
     addPayment,
-    markTeletrans,
+    markFacture,
+    markMutuellePaid,
     saveSettings,
     unlock,
   }
@@ -263,24 +299,58 @@ export function useStore() {
   return ctx
 }
 
-// ----- conversion ligne SQL <-> objet vente -----
-function rowToSale(r) {
+// recalcule price/reste/mutuelle après une modification
+function recompute(s) {
+  const lm = Number(s.lunettes_montant) || 0
+  const lr = Number(s.lunettes_reste) || 0
+  const ltm = Number(s.lentilles_montant) || 0
+  const ltr = Number(s.lentilles_reste) || 0
+  const price = Math.round((lm + ltm) * 100) / 100
+  const reste = Math.round((lr + ltr) * 100) / 100
+  return { ...s, price, reste, mutuelle: Math.max(0, Math.round((price - reste) * 100) / 100) }
+}
+
+// remet une vente ancienne (ancien modèle « type unique ») au bon format
+function normalizeSale(s) {
+  if (s.lunettes_montant != null || s.lentilles_montant != null) return s
+  const price = Number(s.price) || 0
+  const reste = Number(s.reste) || 0
+  const isLent = s.type === 'lentilles'
   return {
+    ...s,
+    lunettes_montant: isLent ? 0 : price,
+    lunettes_reste: isLent ? 0 : reste,
+    lentilles_montant: isLent ? price : 0,
+    lentilles_reste: isLent ? reste : 0,
+    facture: s.facture != null ? s.facture : !!s.teletrans,
+    facture_at: s.facture_at != null ? s.facture_at : s.teletrans_at || null,
+    mutuelle_paid: !!s.mutuelle_paid,
+    mutuelle_paid_at: s.mutuelle_paid_at || null,
+  }
+}
+
+function rowToSale(r) {
+  return normalizeSale({
     id: r.id,
     day: r.day,
     created_at: r.created_at,
     client: r.client,
-    type: r.type,
-    price: Number(r.price),
-    mutuelle: Number(r.mutuelle),
+    lunettes_montant: Number(r.lunettes_montant) || 0,
+    lunettes_reste: Number(r.lunettes_reste) || 0,
+    lentilles_montant: Number(r.lentilles_montant) || 0,
+    lentilles_reste: Number(r.lentilles_reste) || 0,
+    price: Number(r.price) || 0,
+    reste: Number(r.reste) || 0,
+    mutuelle: Number(r.mutuelle) || 0,
     mutuelle_nom: r.mutuelle_nom || '',
     plateforme: r.plateforme || '',
-    reste: Number(r.reste),
     vendor: r.vendor || '',
-    teletrans: !!r.teletrans,
-    teletrans_at: r.teletrans_at,
+    facture: !!r.facture,
+    facture_at: r.facture_at,
+    mutuelle_paid: !!r.mutuelle_paid,
+    mutuelle_paid_at: r.mutuelle_paid_at,
     payments: r.payments || [],
-  }
+  })
 }
 function saleToRow(s) {
   return {
@@ -288,15 +358,20 @@ function saleToRow(s) {
     day: s.day,
     created_at: s.created_at,
     client: s.client,
-    type: s.type,
+    lunettes_montant: s.lunettes_montant,
+    lunettes_reste: s.lunettes_reste,
+    lentilles_montant: s.lentilles_montant,
+    lentilles_reste: s.lentilles_reste,
     price: s.price,
-    mutuelle: s.mutuelle,
-    mutuelle_nom: s.mutuelle_nom || '',
-    plateforme: s.plateforme || '',
     reste: s.reste,
+    mutuelle: s.mutuelle,
+    mutuelle_nom: s.mutuelle_nom,
+    plateforme: s.plateforme,
     vendor: s.vendor,
-    teletrans: s.teletrans,
-    teletrans_at: s.teletrans_at,
+    facture: s.facture,
+    facture_at: s.facture_at,
+    mutuelle_paid: s.mutuelle_paid,
+    mutuelle_paid_at: s.mutuelle_paid_at,
     payments: s.payments,
   }
 }

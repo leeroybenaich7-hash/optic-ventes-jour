@@ -9,21 +9,30 @@ create table if not exists public.ventes (
   day date not null,
   created_at timestamptz not null default now(),
   client text not null default '',
-  type text not null check (type in ('lunettes', 'lentilles')),
+  -- Deux postes possibles par vente :
+  lunettes_montant numeric not null default 0,
+  lunettes_reste numeric not null default 0,
+  lentilles_montant numeric not null default 0,
+  lentilles_reste numeric not null default 0,
+  -- Totaux calculés côté app et stockés :
   price numeric not null default 0,
+  reste numeric not null default 0,
   mutuelle numeric not null default 0,
   mutuelle_nom text not null default '',
   plateforme text not null default '',
-  reste numeric not null default 0,
   vendor text not null default '',
-  teletrans boolean not null default false,
-  teletrans_at timestamptz,
+  -- Étape 2 : dossier facturé à la mutuelle
+  facture boolean not null default false,
+  facture_at timestamptz,
+  -- Étape 3 : mutuelle a payé sa part
+  mutuelle_paid boolean not null default false,
+  mutuelle_paid_at timestamptz,
   payments jsonb not null default '[]'::jsonb
 );
 
 create index if not exists ventes_day_idx on public.ventes (day desc);
 
--- Réglages (une seule ligne : vendeurs, moyens de paiement, code d'accès)
+-- Réglages (une seule ligne : vendeurs, plateformes, mutuelles, moyens, code)
 create table if not exists public.reglages (
   id int primary key default 1,
   data jsonb not null default '{}'::jsonb

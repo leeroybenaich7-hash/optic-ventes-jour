@@ -1,80 +1,58 @@
-// Formulaire de saisie d'une vente — pensé pour aller vite (< 10 s).
-// Le reste à charge se calcule tout seul (prix − mutuelle) mais reste
-// modifiable, et le montant encaissé se pré-remplit avec le reste à charge.
-import React, { useRef, useState } from 'react'
+// Formulaire de saisie d'une vente — pensé pour aller vite.
+// Deux postes possibles (lunettes / lentilles), chacun avec son
+// montant et son reste à charge. Le total, le reste à charge total
+// et la part mutuelle se calculent tout seuls. En choisissant la
+// mutuelle, la plateforme de tiers payant se remplit automatiquement.
+import React, { useMemo, useRef, useState } from 'react'
 import { Glasses, Eye, Check } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
-import { parseEuro, uid } from '../lib/format.js'
-
-// nombre -> texte de champ € ("120" ou "120,50")
-function toInput(n) {
-  const r = Math.round((Number(n) || 0) * 100) / 100
-  if (r <= 0) return ''
-  return Number.isInteger(r) ? String(r) : String(r).replace('.', ',')
-}
+import { euro, parseEuro, uid } from '../lib/format.js'
 
 export default function SaleForm() {
   const { settings, addSale, notify } = useStore()
   const clientRef = useRef(null)
 
   const [client, setClient] = useState('')
-  const [type, setType] = useState(null)
-  const [price, setPrice] = useState('')
-  const [mutuelle, setMutuelle] = useState('')
+  const [luM, setLuM] = useState('')
+  const [luR, setLuR] = useState('')
+  const [leM, setLeM] = useState('')
+  const [leR, setLeR] = useState('')
   const [mutuelleNom, setMutuelleNom] = useState('')
-  const [plateforme, setPlateforme] = useState(null)
-  const [reste, setReste] = useState('')
+  const [plateforme, setPlateforme] = useState('')
   const [encaisse, setEncaisse] = useState('')
+  const [encTouched, setEncTouched] = useState(false)
   const [method, setMethod] = useState(settings.methods[0] || 'CB')
   const [vendor, setVendor] = useState(null)
-  const [teletrans, setTeletrans] = useState(false)
+  const [facture, setFacture] = useState(false)
 
-  // tant que la caissière n'a pas touché ces champs à la main,
-  // ils suivent le calcul automatique
-  const [resteTouched, setResteTouched] = useState(false)
-  const [encTouched, setEncTouched] = useState(false)
+  const total = parseEuro(luM) + parseEuro(leM)
+  const resteTotal = parseEuro(luR) + parseEuro(leR)
+  const partMutuelle = Math.max(0, Math.round((total - resteTotal) * 100) / 100)
 
-  function recompute(nextPrice, nextMutuelle) {
-    const auto = Math.max(0, parseEuro(nextPrice) - parseEuro(nextMutuelle))
-    if (!resteTouched) {
-      const txt = toInput(auto)
-      setReste(txt)
-      if (!encTouched) setEncaisse(txt)
-    }
-  }
+  // reste à charge par défaut à encaisser = reste total (modifiable)
+  const encaisseShown = encTouched ? encaisse : (resteTotal > 0 ? toInput(resteTotal) : '')
 
-  function onPrice(v) {
-    setPrice(v)
-    recompute(v, mutuelle)
-  }
-  function onMutuelle(v) {
-    setMutuelle(v)
-    recompute(price, v)
-  }
-  function onReste(v) {
-    setReste(v)
-    setResteTouched(true)
-    if (!encTouched) setEncaisse(v)
-  }
-  function onEncaisse(v) {
-    setEncaisse(v)
-    setEncTouched(true)
+  // index nom de mutuelle -> plateforme (référencement des Réglages)
+  const refMap = useMemo(() => {
+    const m = new Map()
+    ;(settings.mutuelles || []).forEach((x) => m.set(x.nom.toLowerCase(), x.plateforme))
+    return m
+  }, [settings.mutuelles])
+
+  function onMutuelleNom(v) {
+    setMutuelleNom(v)
+    const p = refMap.get(v.trim().toLowerCase())
+    if (p) setPlateforme(p) // auto-remplissage si la mutuelle est référencée
   }
 
   function reset() {
     setClient('')
-    setType(null)
-    setPrice('')
-    setMutuelle('')
-    setMutuelleNom('')
-    setPlateforme(null)
-    setReste('')
-    setEncaisse('')
+    setLuM(''); setLuR(''); setLeM(''); setLeR('')
+    setMutuelleNom(''); setPlateforme('')
+    setEncaisse(''); setEncTouched(false)
     setMethod(settings.methods[0] || 'CB')
     setVendor(null)
-    setTeletrans(false)
-    setResteTouched(false)
-    setEncTouched(false)
+    setFacture(false)
     clientRef.current?.focus()
   }
 
@@ -85,20 +63,16 @@ export default function SaleForm() {
       clientRef.current?.focus()
       return
     }
-    if (!type) {
-      notify('Choisissez le type : lunettes ou lentilles')
+    if (total <= 0) {
+      notify('Indiquez au moins un montant (lunettes ou lentilles)')
       return
     }
-    if (parseEuro(price) <= 0) {
-      notify('Indiquez le prix total de la vente')
+    if (partMutuelle > 0 && !mutuelleNom.trim()) {
+      notify('Indiquez la mutuelle du client')
       return
     }
-    if (parseEuro(mutuelle) > 0 && !mutuelleNom.trim()) {
-      notify('Indiquez le nom de la mutuelle')
-      return
-    }
-    if (parseEuro(mutuelle) > 0 && !plateforme) {
-      notify('Choisissez la plateforme de la mutuelle')
+    if (partMutuelle > 0 && !plateforme) {
+      notify('Choisissez la plateforme de tiers payant')
       return
     }
     if (!vendor) {
@@ -106,17 +80,17 @@ export default function SaleForm() {
       return
     }
 
-    const montant = parseEuro(encaisse)
+    const montant = encTouched ? parseEuro(encaisse) : resteTotal
     addSale({
       client: client.trim(),
-      type,
-      price: parseEuro(price),
-      mutuelle: parseEuro(mutuelle),
-      mutuelle_nom: parseEuro(mutuelle) > 0 ? mutuelleNom.trim() : '',
-      plateforme: parseEuro(mutuelle) > 0 ? plateforme : '',
-      reste: parseEuro(reste),
+      lunettes_montant: parseEuro(luM),
+      lunettes_reste: parseEuro(luR),
+      lentilles_montant: parseEuro(leM),
+      lentilles_reste: parseEuro(leR),
+      mutuelle_nom: mutuelleNom,
+      plateforme,
       vendor,
-      teletrans: parseEuro(mutuelle) > 0 ? teletrans : false,
+      facture,
       payments:
         montant > 0
           ? [{ id: uid(), at: new Date().toISOString(), amount: montant, method }]
@@ -126,8 +100,8 @@ export default function SaleForm() {
     notify('Vente enregistrée')
   }
 
-  const showMethod = parseEuro(encaisse) > 0
-  const showTeletrans = parseEuro(mutuelle) > 0
+  const showMutuelle = partMutuelle > 0
+  const showMethod = parseEuro(encaisseShown) > 0
 
   return (
     <form className="stack" onSubmit={onSubmit}>
@@ -144,105 +118,101 @@ export default function SaleForm() {
         />
       </div>
 
-      <div className="field">
-        <label>Type de vente</label>
-        <div className="seg">
-          <button
-            type="button"
-            className={'seg-btn big' + (type === 'lunettes' ? ' active' : '')}
-            onClick={() => setType('lunettes')}
-          >
-            <Glasses className="lucide" size={17} />
-            Lunettes
-          </button>
-          <button
-            type="button"
-            className={'seg-btn big' + (type === 'lentilles' ? ' active' : '')}
-            onClick={() => setType('lentilles')}
-          >
-            <Eye className="lucide" size={17} />
-            Lentilles
-          </button>
+      {/* Poste lunettes */}
+      <div className="poste">
+        <div className="poste-head">
+          <Glasses className="lucide" size={18} />
+          <span>Lunettes</span>
         </div>
-      </div>
-
-      <div className="grid-3">
-        <div className="field">
-          <label htmlFor="sf-price">Prix total (€)</label>
-          <input
-            id="sf-price"
-            className="input input-euro"
-            inputMode="decimal"
-            value={price}
-            onChange={(e) => onPrice(e.target.value)}
-            placeholder="0"
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="sf-mutuelle">Part mutuelle (€)</label>
-          <input
-            id="sf-mutuelle"
-            className="input input-euro"
-            inputMode="decimal"
-            value={mutuelle}
-            onChange={(e) => onMutuelle(e.target.value)}
-            placeholder="0"
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="sf-reste">Reste à charge (€)</label>
-          <input
-            id="sf-reste"
-            className="input input-euro"
-            inputMode="decimal"
-            value={reste}
-            onChange={(e) => onReste(e.target.value)}
-            placeholder="0"
-          />
-        </div>
-      </div>
-
-      {showTeletrans && (
         <div className="grid-2">
           <div className="field">
-            <label htmlFor="sf-mutnom">Mutuelle (obligatoire)</label>
-            <input
-              id="sf-mutnom"
-              className="input"
-              value={mutuelleNom}
-              onChange={(e) => setMutuelleNom(e.target.value)}
-              placeholder="Ex. Harmonie Mutuelle"
-            />
+            <label htmlFor="sf-lum">Montant (€)</label>
+            <input id="sf-lum" className="input input-euro" inputMode="decimal"
+              value={luM} onChange={(e) => setLuM(e.target.value)} placeholder="0" />
           </div>
           <div className="field">
-            <label>Plateforme (obligatoire)</label>
+            <label htmlFor="sf-lur">Reste à charge (€)</label>
+            <input id="sf-lur" className="input input-euro" inputMode="decimal"
+              value={luR} onChange={(e) => setLuR(e.target.value)} placeholder="0" />
+          </div>
+        </div>
+      </div>
+
+      {/* Poste lentilles */}
+      <div className="poste">
+        <div className="poste-head">
+          <Eye className="lucide" size={18} />
+          <span>Lentilles</span>
+        </div>
+        <div className="grid-2">
+          <div className="field">
+            <label htmlFor="sf-lem">Montant (€)</label>
+            <input id="sf-lem" className="input input-euro" inputMode="decimal"
+              value={leM} onChange={(e) => setLeM(e.target.value)} placeholder="0" />
+          </div>
+          <div className="field">
+            <label htmlFor="sf-ler">Reste à charge (€)</label>
+            <input id="sf-ler" className="input input-euro" inputMode="decimal"
+              value={leR} onChange={(e) => setLeR(e.target.value)} placeholder="0" />
+          </div>
+        </div>
+      </div>
+
+      {/* Récap calculé */}
+      <div className="recap">
+        <div><span className="recap-lbl">Total</span><span className="recap-val">{euro(total)}</span></div>
+        <div><span className="recap-lbl">Reste à charge</span><span className="recap-val">{euro(resteTotal)}</span></div>
+        <div><span className="recap-lbl">Part mutuelle</span><span className="recap-val">{euro(partMutuelle)}</span></div>
+      </div>
+
+      {/* Mutuelle + plateforme (si part mutuelle) */}
+      {showMutuelle && (
+        <>
+          <div className="field">
+            <label htmlFor="sf-mut">Mutuelle (obligatoire)</label>
+            <input
+              id="sf-mut"
+              className="input"
+              list="mutuelles-list"
+              value={mutuelleNom}
+              onChange={(e) => onMutuelleNom(e.target.value)}
+              placeholder="Tapez ou choisissez la mutuelle"
+              autoComplete="off"
+            />
+            <datalist id="mutuelles-list">
+              {(settings.mutuelles || []).map((m) => (
+                <option key={m.nom} value={m.nom}>{m.plateforme}</option>
+              ))}
+            </datalist>
+            <span className="hint">La plateforme se remplit toute seule si la mutuelle est connue.</span>
+          </div>
+          <div className="field">
+            <label>Plateforme de tiers payant (obligatoire)</label>
             <div className="seg">
               {(settings.plateformes || []).map((p) => (
-                <button
-                  type="button"
-                  key={p}
+                <button type="button" key={p}
                   className={'seg-btn' + (plateforme === p ? ' active' : '')}
-                  onClick={() => setPlateforme(p)}
-                >
+                  onClick={() => setPlateforme(p)}>
                   {p}
                 </button>
               ))}
             </div>
           </div>
-        </div>
+        </>
       )}
 
+      {/* Encaissement du reste à charge */}
       <div className="field">
-        <label htmlFor="sf-encaisse">Montant encaissé aujourd'hui (€)</label>
+        <label htmlFor="sf-encaisse">Encaissé aujourd'hui (€)</label>
         <input
           id="sf-encaisse"
           className="input input-euro"
           inputMode="decimal"
-          value={encaisse}
-          onChange={(e) => onEncaisse(e.target.value)}
+          value={encaisseShown}
+          onChange={(e) => { setEncaisse(e.target.value); setEncTouched(true) }}
           placeholder="0"
         />
-        <span className="hint">S'il paie moins, le reste passe dans l'onglet Reste à charge</span>
+        <span className="hint">S'il paie moins que son reste à charge, le solde va dans « Reste à charge ».</span>
       </div>
 
       {showMethod && (
@@ -250,12 +220,9 @@ export default function SaleForm() {
           <label>Moyen de paiement</label>
           <div className="seg">
             {settings.methods.map((m) => (
-              <button
-                type="button"
-                key={m}
+              <button type="button" key={m}
                 className={'seg-btn' + (method === m ? ' active' : '')}
-                onClick={() => setMethod(m)}
-              >
+                onClick={() => setMethod(m)}>
                 {m}
               </button>
             ))}
@@ -267,26 +234,19 @@ export default function SaleForm() {
         <label>Vendeur</label>
         <div className="seg">
           {settings.vendors.map((v) => (
-            <button
-              type="button"
-              key={v}
+            <button type="button" key={v}
               className={'seg-btn' + (vendor === v ? ' active' : '')}
-              onClick={() => setVendor(v)}
-            >
+              onClick={() => setVendor(v)}>
               {v}
             </button>
           ))}
         </div>
       </div>
 
-      {showTeletrans && (
+      {showMutuelle && (
         <label className="check">
-          <input
-            type="checkbox"
-            checked={teletrans}
-            onChange={(e) => setTeletrans(e.target.checked)}
-          />
-          Facturation mutuelle déjà faite
+          <input type="checkbox" checked={facture} onChange={(e) => setFacture(e.target.checked)} />
+          Dossier déjà facturé à la mutuelle
         </label>
       )}
 
@@ -298,4 +258,11 @@ export default function SaleForm() {
       </div>
     </form>
   )
+}
+
+// nombre -> texte de champ € ("120" ou "120,5")
+function toInput(n) {
+  const r = Math.round((Number(n) || 0) * 100) / 100
+  if (r <= 0) return ''
+  return Number.isInteger(r) ? String(r) : String(r).replace('.', ',')
 }

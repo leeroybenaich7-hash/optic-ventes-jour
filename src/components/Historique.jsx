@@ -204,8 +204,8 @@ export default function Historique() {
       .filter((s) => s.day >= start && s.day <= end)
       .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
 
-    const lun = filtered.filter((s) => s.type === 'lunettes')
-    const len = filtered.filter((s) => s.type === 'lentilles')
+    const lun = filtered.filter((s) => (Number(s.lunettes_montant) || 0) > 0)
+    const len = filtered.filter((s) => (Number(s.lentilles_montant) || 0) > 0)
 
     // encaissements dont la date tombe dans la période, toutes ventes confondues
     const paymentsInPeriod = []
@@ -246,8 +246,8 @@ export default function Historique() {
     return {
       filtered,
       caTotal: sum(filtered, (s) => s.price),
-      lunettes: { nb: lun.length, ca: sum(lun, (s) => s.price) },
-      lentilles: { nb: len.length, ca: sum(len, (s) => s.price) },
+      lunettes: { nb: lun.length, ca: sum(filtered, (s) => s.lunettes_montant) },
+      lentilles: { nb: len.length, ca: sum(filtered, (s) => s.lentilles_montant) },
       mutuelleTotal: sum(filtered, (s) => s.mutuelle),
       encaisse: sum(paymentsInPeriod, (p) => p.amount),
       parVendeur,

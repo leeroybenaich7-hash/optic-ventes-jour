@@ -4,6 +4,118 @@ import { useStore } from '../lib/store.jsx'
 import { today } from '../lib/format.js'
 import { APP_VERSION } from '../lib/config.js'
 
+// Référencement mutuelle -> plateforme de tiers payant.
+// Regroupé par plateforme pour bien voir « qui facture où ».
+function MutuellesEditor({ plateformes, mutuelles, onSave }) {
+  const [nom, setNom] = useState('')
+  const [plat, setPlat] = useState(plateformes[0] || '')
+
+  function add(e) {
+    e.preventDefault()
+    const n = nom.trim()
+    if (!n || !plat) return
+    const rest = mutuelles.filter((m) => m.nom.toLowerCase() !== n.toLowerCase())
+    onSave([...rest, { nom: n, plateforme: plat }], `« ${n} » → ${plat}`)
+    setNom('')
+  }
+
+  function remove(m) {
+    if (!window.confirm(`Retirer « ${m.nom} » du référencement ?`)) return
+    onSave(mutuelles.filter((x) => x.nom !== m.nom), `« ${m.nom} » retiré`)
+  }
+
+  const groupes = plateformes
+    .map((p) => ({
+      plateforme: p,
+      items: mutuelles
+        .filter((m) => m.plateforme === p)
+        .slice()
+        .sort((a, b) => a.nom.localeCompare(b.nom)),
+    }))
+    .filter((g) => g.items.length > 0)
+
+  const orphelines = mutuelles.filter((m) => !plateformes.includes(m.plateforme))
+
+  return (
+    <div className="card">
+      <div className="card-title">Mutuelles & plateformes</div>
+      <div className="card-sub">
+        Le lien entre chaque mutuelle et sa plateforme de tiers payant. En vente,
+        choisir la mutuelle remplit la plateforme toute seule.
+      </div>
+      <p className="hint" style={{ marginTop: -6, marginBottom: 14 }}>
+        ⚠ Liste de départ à vérifier : le rattachement peut changer. Corrigez-la
+        avec vos vraies mutuelles.
+      </p>
+
+      <div className="stack">
+        {groupes.map((g) => (
+          <div key={g.plateforme}>
+            <div className="row" style={{ gap: 8, marginBottom: 6 }}>
+              <span className="pill pill-teal">{g.plateforme}</span>
+              <span className="small muted">{g.items.length} mutuelle{g.items.length > 1 ? 's' : ''}</span>
+            </div>
+            <div className="chips">
+              {g.items.map((m) => (
+                <span className="chip" key={m.nom}>
+                  {m.nom}
+                  <button type="button" className="chip-x" aria-label={`Retirer ${m.nom}`} onClick={() => remove(m)}>
+                    <Trash2 className="lucide" size={13} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {orphelines.length > 0 && (
+          <div>
+            <div className="row" style={{ gap: 8, marginBottom: 6 }}>
+              <span className="pill pill-no">Sans plateforme connue</span>
+            </div>
+            <div className="chips">
+              {orphelines.map((m) => (
+                <span className="chip" key={m.nom}>
+                  {m.nom} <span className="muted">({m.plateforme || '—'})</span>
+                  <button type="button" className="chip-x" aria-label={`Retirer ${m.nom}`} onClick={() => remove(m)}>
+                    <Trash2 className="lucide" size={13} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={add} className="stack" style={{ gap: 8 }}>
+          <div className="field">
+            <label>Ajouter une mutuelle</label>
+            <input className="input" value={nom} onChange={(e) => setNom(e.target.value)}
+              placeholder="Nom de la mutuelle" />
+          </div>
+          <div className="field">
+            <label>Sur quelle plateforme ?</label>
+            <div className="seg">
+              {plateformes.map((p) => (
+                <button type="button" key={p}
+                  className={'seg-btn' + (plat === p ? ' active' : '')}
+                  onClick={() => setPlat(p)}>
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="row">
+            <button type="submit" className="btn btn-ghost">
+              <Plus className="lucide" size={17} />
+              Ajouter au référencement
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 function ListEditor({ title, sub, items, onSave, addLabel, confirmMsg }) {
   const [draft, setDraft] = useState('')
 
@@ -117,6 +229,15 @@ export default function Reglages() {
         confirmMsg={(p) => `Retirer la plateforme « ${p} » ?`}
         onSave={(plateformes, msg) => {
           saveSettings({ plateformes })
+          notify(msg)
+        }}
+      />
+
+      <MutuellesEditor
+        plateformes={settings.plateformes || []}
+        mutuelles={settings.mutuelles || []}
+        onSave={(mutuelles, msg) => {
+          saveSettings({ mutuelles })
           notify(msg)
         }}
       />
