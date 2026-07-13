@@ -58,3 +58,19 @@ export function uid() {
     Date.now().toString(36) + Math.random().toString(36).slice(2, 10)
   )
 }
+
+// texte normalisé (minuscules, sans accents) pour une recherche tolérante
+export function normText(s) {
+  return String(s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+}
+
+// une vente correspond-elle à la recherche (client ou mutuelle) ?
+export function matchClient(sale, query) {
+  const q = normText(query)
+  if (!q) return true
+  return normText(sale.client).includes(q) || normText(sale.mutuelle_nom).includes(q)
+}

@@ -45,7 +45,11 @@ CB, espèces, chèque… à comparer avec la caisse réelle.
 
 ## Revoir / rechercher
 
-- **Recherche** (en haut) : taper un nom → tous ses dossiers avec leurs statuts.
+- **Recherche globale** (en haut) : taper un nom → tous ses dossiers, toutes
+  dates confondues, avec leurs statuts.
+- **Recherche dans chaque onglet** : À facturer, Paiements mutuelle, Reste à
+  charge et Historique ont chacun une barre pour filtrer par client. Dans
+  l'Historique, les chiffres se recalculent pour le client cherché.
 - Onglet **Historique** : une date ou une période, chiffres + graphique.
 
 ## Réglages

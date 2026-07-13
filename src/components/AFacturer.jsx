@@ -1,16 +1,19 @@
 // Étape 2 — « À facturer » : dossiers avec part mutuelle pas encore
 // facturés. Un clic sur « Facturé » = la demande est envoyée à la
 // plateforme, et le dossier passe dans « Paiements mutuelle ».
-import React from 'react'
+import React, { useState } from 'react'
 import { Send, Undo2, CheckCircle2 } from 'lucide-react'
 import { useStore, pendingFacture } from '../lib/store.jsx'
-import { euro, today, fmtDay, fmtTime, daysAgo } from '../lib/format.js'
+import { euro, today, fmtDay, fmtTime, daysAgo, matchClient } from '../lib/format.js'
+import SearchBar from './SearchBar.jsx'
 
 export default function AFacturer() {
   const { sales, markFacture, notify } = useStore()
   const jour = today()
+  const [q, setQ] = useState('')
 
   const attente = pendingFacture(sales)
+    .filter((v) => matchClient(v, q))
     .slice()
     .sort((a, b) =>
       a.day === b.day
@@ -43,10 +46,12 @@ export default function AFacturer() {
           reste ici tant qu'il n'est pas facturé — même les jours suivants.
         </p>
 
+        <SearchBar value={q} onChange={setQ} />
+
         {attente.length === 0 ? (
           <div className="empty">
             <CheckCircle2 className="lucide" />
-            <p>Tout est facturé. Rien en attente.</p>
+            <p>{q ? 'Aucun client trouvé pour cette recherche.' : 'Tout est facturé. Rien en attente.'}</p>
           </div>
         ) : (
           <>

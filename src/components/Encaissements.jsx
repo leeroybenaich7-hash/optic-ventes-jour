@@ -3,22 +3,25 @@
 import React, { useMemo, useState } from 'react'
 import { Wallet, ChevronDown, ChevronUp, CheckCircle2, X } from 'lucide-react'
 import { useStore, paidOf, dueOf, pendingDue, hasLunettes, hasLentilles } from '../lib/store.jsx'
-import { euro, today, fmtDay, fmtTime, daysAgo, parseEuro } from '../lib/format.js'
+import { euro, today, fmtDay, fmtTime, daysAgo, parseEuro, matchClient } from '../lib/format.js'
+import SearchBar from './SearchBar.jsx'
 
 export default function Encaissements() {
   const { sales, settings, addPayment, notify } = useStore()
   const [openId, setOpenId] = useState(null) // ligne dont l'historique est déplié
   const [modalSale, setModalSale] = useState(null) // vente en cours d'encaissement
+  const [q, setQ] = useState('')
 
   const list = useMemo(() => {
     return pendingDue(sales)
+      .filter((v) => matchClient(v, q))
       .slice()
       .sort((a, b) =>
         a.day === b.day
           ? String(a.created_at).localeCompare(String(b.created_at))
           : a.day.localeCompare(b.day)
       )
-  }, [sales])
+  }, [sales, q])
 
   const totalDue = list.reduce((s, v) => s + dueOf(v), 0)
 
@@ -31,10 +34,12 @@ export default function Encaissements() {
           disparaît d'ici tant que ce n'est pas soldé.
         </p>
 
+        <SearchBar value={q} onChange={setQ} />
+
         {list.length === 0 ? (
           <div className="empty">
             <CheckCircle2 className="lucide" />
-            <p>Tout est encaissé. Aucun reste dû.</p>
+            <p>{q ? 'Aucun client trouvé pour cette recherche.' : 'Tout est encaissé. Aucun reste dû.'}</p>
           </div>
         ) : (
           <>

@@ -252,6 +252,31 @@ input, select, textarea { font-family: inherit; }
 .seg-btn.big { padding: 13px 22px; font-size: 16px; }
 .seg-btn .lucide { width: 17px; height: 17px; }
 
+/* barre de recherche dans les onglets */
+.searchbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 13px;
+  border: 1px solid var(--line-strong);
+  border-radius: 11px;
+  background: var(--panel);
+  margin-bottom: 14px;
+  max-width: 360px;
+}
+.searchbar:focus-within {
+  border-color: var(--accent-line);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.searchbar .lucide { color: var(--muted); flex: none; }
+.searchbar-input {
+  border: none; background: none; outline: none;
+  font-size: 14.5px; color: var(--txt); width: 100%;
+}
+.searchbar-x {
+  display: inline-flex; padding: 2px; border: none; border-radius: 999px;
+  background: none; color: var(--muted); flex: none;
+}
+.searchbar-x:hover { background: var(--panel-hi); color: var(--txt); }
+
 /* étiquettes de mutuelles (réglages) */
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {

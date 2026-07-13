@@ -3,8 +3,9 @@
 import React, { useMemo, useState } from 'react'
 import { CalendarSearch } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
-import { euro, today, fmtDay } from '../lib/format.js'
+import { euro, today, fmtDay, matchClient } from '../lib/format.js'
 import SalesTable from './SalesTable.jsx'
+import SearchBar from './SearchBar.jsx'
 
 // 'YYYY-MM-DD' décalé de n jours (fuseau local)
 function shiftDay(day, n) {
@@ -165,6 +166,7 @@ export default function Historique() {
   const { sales } = useStore()
   // sélection : { mode:'day', day } ou { mode:'range', nb }
   const [sel, setSel] = useState({ mode: 'day', day: today() })
+  const [q, setQ] = useState('')
 
   const quickActive =
     sel.mode === 'day' && sel.day === today()
@@ -201,15 +203,16 @@ export default function Historique() {
     chartTotals,
   } = useMemo(() => {
     const filtered = sales
-      .filter((s) => s.day >= start && s.day <= end)
+      .filter((s) => s.day >= start && s.day <= end && matchClient(s, q))
       .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
 
     const lun = filtered.filter((s) => (Number(s.lunettes_montant) || 0) > 0)
     const len = filtered.filter((s) => (Number(s.lentilles_montant) || 0) > 0)
 
-    // encaissements dont la date tombe dans la période, toutes ventes confondues
+    // encaissements dont la date tombe dans la période (filtrés par client)
     const paymentsInPeriod = []
     for (const s of sales) {
+      if (!matchClient(s, q)) continue
       for (const p of s.payments || []) {
         const d = isoToDay(p.at)
         if (d >= start && d <= end) paymentsInPeriod.push(p)
@@ -238,7 +241,7 @@ export default function Historique() {
     const chartDaySet = new Set(chartDays)
     const chartTotals = {}
     for (const s of sales) {
-      if (chartDaySet.has(s.day)) {
+      if (chartDaySet.has(s.day) && matchClient(s, q)) {
         chartTotals[s.day] = (chartTotals[s.day] || 0) + (Number(s.price) || 0)
       }
     }
@@ -255,7 +258,7 @@ export default function Historique() {
       chartDays,
       chartTotals,
     }
-  }, [sales, start, end, sel])
+  }, [sales, start, end, sel, q])
 
   const titrePeriode =
     sel.mode === 'day'
@@ -287,14 +290,14 @@ export default function Historique() {
           <div className="field">
             <label>Raccourcis</label>
             <div className="seg">
-              {QUICK.map((q) => (
+              {QUICK.map((item) => (
                 <button
-                  key={q.id}
+                  key={item.id}
                   type="button"
-                  className={'seg-btn' + (quickActive === q.id ? ' active' : '')}
-                  onClick={() => pickQuick(q.id)}
+                  className={'seg-btn' + (quickActive === item.id ? ' active' : '')}
+                  onClick={() => pickQuick(item.id)}
                 >
-                  {q.label}
+                  {item.label}
                 </button>
               ))}
             </div>
@@ -303,6 +306,14 @@ export default function Historique() {
         <p className="hint" style={{ marginTop: 10, textTransform: 'capitalize' }}>
           {titrePeriode}
         </p>
+        <div style={{ marginTop: 12 }}>
+          <SearchBar value={q} onChange={setQ} placeholder="Filtrer par client…" />
+          {q && (
+            <p className="hint" style={{ marginTop: -6 }}>
+              Chiffres et ventes filtrés sur « {q} ».
+            </p>
+          )}
+        </div>
       </section>
 
       {filtered.length === 0 ? (

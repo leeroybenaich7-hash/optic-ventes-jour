@@ -1,16 +1,19 @@
 // Étape 3 — « Paiements mutuelle » : dossiers facturés dont on
 // attend le règlement de la mutuelle. Un clic sur « Payé » = la
 // mutuelle a réglé sa part, le dossier est soldé.
-import React from 'react'
+import React, { useState } from 'react'
 import { BadgeEuro, Undo2, CheckCircle2 } from 'lucide-react'
 import { useStore, pendingMutuellePaid } from '../lib/store.jsx'
-import { euro, today, fmtDay, fmtTime, daysAgo } from '../lib/format.js'
+import { euro, today, fmtDay, fmtTime, daysAgo, matchClient } from '../lib/format.js'
+import SearchBar from './SearchBar.jsx'
 
 export default function PaiementsMutuelle() {
   const { sales, markMutuellePaid, notify } = useStore()
   const jour = today()
+  const [q, setQ] = useState('')
 
   const attente = pendingMutuellePaid(sales)
+    .filter((v) => matchClient(v, q))
     .slice()
     .sort((a, b) =>
       String(a.facture_at || a.created_at).localeCompare(String(b.facture_at || b.created_at))
@@ -41,10 +44,12 @@ export default function PaiementsMutuelle() {
           Pointez « Payé » quand l'argent est arrivé.
         </p>
 
+        <SearchBar value={q} onChange={setQ} />
+
         {attente.length === 0 ? (
           <div className="empty">
             <CheckCircle2 className="lucide" />
-            <p>Aucun paiement mutuelle en attente.</p>
+            <p>{q ? 'Aucun client trouvé pour cette recherche.' : 'Aucun paiement mutuelle en attente.'}</p>
           </div>
         ) : (
           <>
