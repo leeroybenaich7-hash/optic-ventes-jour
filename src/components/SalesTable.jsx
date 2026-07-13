@@ -75,6 +75,18 @@ export default function SalesTable({ sales, readOnly }) {
     ? (settings.mutuelles || []).filter((m) => m.plateforme === edit.plateforme)
     : []
 
+  // Totaux de la sélection (ligne du bas)
+  const tot = sales.reduce(
+    (a, s) => ({
+      price: a.price + (Number(s.price) || 0),
+      mutuelle: a.mutuelle + (Number(s.mutuelle) || 0),
+      reste: a.reste + (Number(s.reste) || 0),
+      lunettes: a.lunettes + (Number(s.lunettes_montant) || 0),
+      lentilles: a.lentilles + (Number(s.lentilles_montant) || 0),
+    }),
+    { price: 0, mutuelle: 0, reste: 0, lunettes: 0, lentilles: 0 }
+  )
+
   return (
     <>
       <div className="table-wrap">
@@ -145,6 +157,20 @@ export default function SalesTable({ sales, readOnly }) {
               )
             })}
           </tbody>
+          <tfoot>
+            <tr className="totals-row">
+              <td colSpan={4}>
+                <strong>Totaux</strong>{' '}
+                <span className="small muted">
+                  · lunettes {euro(tot.lunettes)} · lentilles {euro(tot.lentilles)}
+                </span>
+              </td>
+              <td className="num"><strong>{euro(tot.price)}</strong></td>
+              <td className="num"><strong>{euro(tot.mutuelle)}</strong></td>
+              <td className="num"><strong>{euro(tot.reste)}</strong></td>
+              <td colSpan={readOnly ? 2 : 3} />
+            </tr>
+          </tfoot>
         </table>
       </div>
 

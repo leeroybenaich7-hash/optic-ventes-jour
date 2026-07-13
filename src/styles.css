@@ -358,6 +358,13 @@ table.data td {
 }
 table.data tr:hover td { background: var(--panel-2); }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.totals-row td {
+  border-top: 2px solid var(--line-strong);
+  border-bottom: none;
+  background: var(--panel-2);
+  font-family: var(--serif); font-size: 15px;
+}
+.totals-row td strong { font-weight: 600; }
 
 /* ---------- pastilles de statut ---------- */
 .pill {
