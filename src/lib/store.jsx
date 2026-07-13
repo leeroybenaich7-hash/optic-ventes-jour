@@ -25,7 +25,7 @@ const LS_UNLOCKED = 'ocvj_unlocked'
 
 export const DEFAULT_SETTINGS = {
   vendors: ['Maman', 'Binesa', 'Nadia'],
-  methods: ['CB', 'Espèces', 'Chèque', 'Virement'],
+  methods: ['Espèces', 'Carte bancaire', 'Alma', 'Chèque'],
   // Plateformes de tiers payant (les « portails » sur lesquels on facture)
   plateformes: ['Viamedis', 'Almerys', 'Santéclair', 'Itelis', 'Carte Blanche', 'Kalixia', 'Sévéane', 'Actil'],
   // Référencement : quelle mutuelle passe par quelle plateforme.
