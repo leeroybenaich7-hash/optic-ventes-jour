@@ -112,38 +112,36 @@ export default function Dashboard() {
       </div>
 
       <div className="grid-2">
-        <div className="card">
-          <h2 className="card-title">Nouvelle vente</h2>
-          <SaleForm />
-        </div>
+        <SaleForm type="lunettes" />
+        <SaleForm type="lentilles" />
+      </div>
 
-        <div className="card">
-          <h2 className="card-title">Caisse du jour</h2>
-          <p className="card-sub">
-            Encaissements d'aujourd'hui par moyen de paiement, pour la vérification du soir.
-          </p>
-          {paiementsJour.length === 0 ? (
-            <div className="empty">
-              <Wallet className="lucide" />
-              <p>Aucun encaissement pour l'instant — la caisse se remplira au fil de la journée.</p>
-            </div>
-          ) : (
-            <div className="stack">
-              {moyens.map((m) => (
-                <div className="row-between" key={m}>
-                  <span>{m}</span>
-                  <strong className="num">{euro(parMoyen[m] || 0)}</strong>
-                </div>
-              ))}
-              <div className="row-between">
-                <span className="serif">
-                  <strong>Total encaissé</strong>
-                </span>
-                <strong className="num">{euro(encaisseJour)}</strong>
+      <div className="card">
+        <h2 className="card-title">Caisse du jour</h2>
+        <p className="card-sub">
+          Encaissements d'aujourd'hui par moyen de paiement, pour la vérification du soir.
+        </p>
+        {paiementsJour.length === 0 ? (
+          <div className="empty">
+            <Wallet className="lucide" />
+            <p>Aucun encaissement pour l'instant — la caisse se remplira au fil de la journée.</p>
+          </div>
+        ) : (
+          <div className="stack">
+            {moyens.map((m) => (
+              <div className="row-between" key={m}>
+                <span>{m}</span>
+                <strong className="num">{euro(parMoyen[m] || 0)}</strong>
               </div>
+            ))}
+            <div className="row-between">
+              <span className="serif">
+                <strong>Total encaissé</strong>
+              </span>
+              <strong className="num">{euro(encaisseJour)}</strong>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <div className="card">

@@ -1,31 +1,33 @@
-// Formulaire de saisie d'une vente — pensé pour aller vite.
-// Lunettes et Lentilles ont chacun leur montant ; le total est la
-// somme des deux, affiché en gros. Le reste à charge est UNIQUE,
-// sur ce total. Le client ne paie RIEN à la vente : il règle son
-// reste à charge à la récupération → il part dans « Reste à charge ».
-// On choisit la plateforme de tiers payant, qui propose ses mutuelles.
+// Formulaire de saisie d'une vente, dédié à UN type (lunettes OU
+// lentilles) — deux carrés côte à côte sur le tableau de bord.
+// On tape le prix total de l'équipement et la part mutuelle ;
+// le reste à charge se calcule tout seul (0 s'il n'y en a pas).
+// Le client ne paie rien à la vente : le reste à charge se règle
+// au retrait (il part dans l'onglet « Reste à charge »).
 import React, { useMemo, useRef, useState } from 'react'
 import { Glasses, Eye, Check } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
 import { euro, parseEuro } from '../lib/format.js'
 
-export default function SaleForm() {
+export default function SaleForm({ type }) {
   const { settings, addSale, notify } = useStore()
   const clientRef = useRef(null)
+  const estLunettes = type === 'lunettes'
+  const titre = estLunettes ? 'Nouvelle vente Lunettes' : 'Nouvelle vente Lentilles'
+  const Icon = estLunettes ? Glasses : Eye
 
   const [client, setClient] = useState('')
-  const [luM, setLuM] = useState('')
-  const [leM, setLeM] = useState('')
-  const [reste, setReste] = useState('')
+  const [prix, setPrix] = useState('')
+  const [mutuelle, setMutuelle] = useState('')
   const [plateforme, setPlateforme] = useState('')
   const [mutuelleNom, setMutuelleNom] = useState('')
   const [autreMut, setAutreMut] = useState(false)
   const [vendor, setVendor] = useState(null)
   const [facture, setFacture] = useState(false)
 
-  const total = parseEuro(luM) + parseEuro(leM)
-  const resteNum = Math.min(total, parseEuro(reste))
-  const partMutuelle = Math.max(0, Math.round((total - resteNum) * 100) / 100)
+  const prixNum = parseEuro(prix)
+  const mutNum = Math.min(prixNum, parseEuro(mutuelle))
+  const reste = Math.max(0, Math.round((prixNum - mutNum) * 100) / 100)
 
   const mutuellesDeLaPlateforme = useMemo(
     () => (settings.mutuelles || []).filter((m) => m.plateforme === plateforme),
@@ -40,7 +42,7 @@ export default function SaleForm() {
 
   function reset() {
     setClient('')
-    setLuM(''); setLeM(''); setReste('')
+    setPrix(''); setMutuelle('')
     setPlateforme(''); setMutuelleNom(''); setAutreMut(false)
     setVendor(null)
     setFacture(false)
@@ -54,15 +56,15 @@ export default function SaleForm() {
       clientRef.current?.focus()
       return
     }
-    if (total <= 0) {
-      notify('Indiquez au moins un montant (lunettes ou lentilles)')
+    if (prixNum <= 0) {
+      notify('Indiquez le prix total de l’équipement')
       return
     }
-    if (partMutuelle > 0 && !plateforme) {
+    if (mutNum > 0 && !plateforme) {
       notify('Choisissez la plateforme de tiers payant')
       return
     }
-    if (partMutuelle > 0 && !mutuelleNom.trim()) {
+    if (mutNum > 0 && !mutuelleNom.trim()) {
       notify('Choisissez la mutuelle du client')
       return
     }
@@ -71,12 +73,11 @@ export default function SaleForm() {
       return
     }
 
-    // Aucun encaissement à la vente : le reste à charge se règle au retrait.
     addSale({
       client: client.trim(),
-      lunettes_montant: parseEuro(luM),
-      lentilles_montant: parseEuro(leM),
-      reste: resteNum,
+      lunettes_montant: estLunettes ? prixNum : 0,
+      lentilles_montant: estLunettes ? 0 : prixNum,
+      reste,
       mutuelle_nom: mutuelleNom,
       plateforme,
       vendor,
@@ -84,131 +85,114 @@ export default function SaleForm() {
       payments: [],
     })
     reset()
-    notify('Vente enregistrée')
+    notify(estLunettes ? 'Vente lunettes enregistrée' : 'Vente lentilles enregistrée')
   }
 
-  const showMutuelle = partMutuelle > 0
+  const showMutuelle = mutNum > 0
 
   return (
-    <form className="stack" onSubmit={onSubmit}>
-      <div className="field">
-        <label htmlFor="sf-client">Nom du client</label>
-        <input id="sf-client" ref={clientRef} className="input" value={client}
-          onChange={(e) => setClient(e.target.value)} placeholder="Ex. Mme Cohen" autoFocus />
-      </div>
-
-      {/* Montants par poste */}
-      <div className="grid-2">
-        <div className="poste">
-          <div className="poste-head"><Glasses className="lucide" size={18} /><span>Lunettes</span></div>
-          <div className="field">
-            <label htmlFor="sf-lum">Montant (€)</label>
-            <input id="sf-lum" className="input input-euro" inputMode="decimal"
-              value={luM} onChange={(e) => setLuM(e.target.value)} placeholder="0" />
-          </div>
-        </div>
-        <div className="poste">
-          <div className="poste-head"><Eye className="lucide" size={18} /><span>Lentilles</span></div>
-          <div className="field">
-            <label htmlFor="sf-lem">Montant (€)</label>
-            <input id="sf-lem" className="input input-euro" inputMode="decimal"
-              value={leM} onChange={(e) => setLeM(e.target.value)} placeholder="0" />
-          </div>
-        </div>
-      </div>
-
-      {/* Total en gros */}
-      <div className="total-hero">
-        <span className="total-hero-lbl">Total de la vente</span>
-        <span className="total-hero-val">{euro(total)}</span>
-      </div>
-
-      {/* Reste à charge (réglé au retrait) + part mutuelle */}
-      <div className="grid-2">
+    <div className="card">
+      <h2 className="card-title">
+        <Icon className="lucide" size={20} style={{ verticalAlign: '-3px', marginRight: 8, color: 'var(--accent)' }} />
+        {titre}
+      </h2>
+      <form className="stack" onSubmit={onSubmit}>
         <div className="field">
-          <label htmlFor="sf-reste">Reste à charge (€)</label>
-          <input id="sf-reste" className="input input-euro" inputMode="decimal"
-            value={reste} onChange={(e) => setReste(e.target.value)} placeholder="0" />
-          <span className="hint">Réglé par le client au retrait — retrouvé dans « Reste à charge ».</span>
+          <label>Nom du client</label>
+          <input ref={clientRef} className="input" value={client}
+            onChange={(e) => setClient(e.target.value)} placeholder="Ex. Mme Cohen" />
         </div>
+
+        <div className="field">
+          <label>Prix total de l’équipement (€)</label>
+          <input className="input input-euro" inputMode="decimal" value={prix}
+            onChange={(e) => setPrix(e.target.value)} placeholder="0" />
+        </div>
+
         <div className="field">
           <label>Part mutuelle (€)</label>
-          <div className="input input-euro readonly-val">{euro(partMutuelle)}</div>
+          <input className="input input-euro" inputMode="decimal" value={mutuelle}
+            onChange={(e) => setMutuelle(e.target.value)} placeholder="0" />
         </div>
-      </div>
 
-      {/* Plateforme -> ses mutuelles */}
-      {showMutuelle && (
-        <>
-          <div className="field">
-            <label>Plateforme de tiers payant (obligatoire)</label>
-            <div className="seg">
-              {(settings.plateformes || []).map((p) => (
-                <button type="button" key={p}
-                  className={'seg-btn' + (plateforme === p ? ' active' : '')}
-                  onClick={() => choisirPlateforme(p)}>
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
+        <div className="field">
+          <label>Reste à charge (€)</label>
+          <div className="input input-euro readonly-val">{euro(reste)}</div>
+          <span className="hint">Calculé (prix − mutuelle). Réglé par le client au retrait.</span>
+        </div>
 
-          {plateforme && (
+        {showMutuelle && (
+          <>
             <div className="field">
-              <label>Mutuelle (obligatoire)</label>
+              <label>Plateforme de tiers payant (obligatoire)</label>
               <div className="seg">
-                {mutuellesDeLaPlateforme.map((m) => (
-                  <button type="button" key={m.nom}
-                    className={'seg-btn' + (!autreMut && mutuelleNom === m.nom ? ' active' : '')}
-                    onClick={() => { setMutuelleNom(m.nom); setAutreMut(false) }}>
-                    {m.nom}
+                {(settings.plateformes || []).map((p) => (
+                  <button type="button" key={p}
+                    className={'seg-btn' + (plateforme === p ? ' active' : '')}
+                    onClick={() => choisirPlateforme(p)}>
+                    {p}
                   </button>
                 ))}
-                <button type="button"
-                  className={'seg-btn' + (autreMut ? ' active' : '')}
-                  onClick={() => { setAutreMut(true); setMutuelleNom('') }}>
-                  + Autre mutuelle
-                </button>
               </div>
-              {mutuellesDeLaPlateforme.length === 0 && !autreMut && (
-                <span className="hint">Aucune mutuelle enregistrée pour {plateforme} — utilisez « Autre mutuelle » (et ajoutez-la dans Réglages).</span>
-              )}
-              {autreMut && (
-                <input className="input" style={{ marginTop: 8 }} value={mutuelleNom}
-                  onChange={(e) => setMutuelleNom(e.target.value)}
-                  placeholder="Nom de la mutuelle" autoFocus />
-              )}
             </div>
-          )}
-        </>
-      )}
 
-      <div className="field">
-        <label>Vendeur</label>
-        <div className="seg">
-          {settings.vendors.map((v) => (
-            <button type="button" key={v}
-              className={'seg-btn' + (vendor === v ? ' active' : '')}
-              onClick={() => setVendor(v)}>
-              {v}
-            </button>
-          ))}
+            {plateforme && (
+              <div className="field">
+                <label>Mutuelle (obligatoire)</label>
+                <div className="seg">
+                  {mutuellesDeLaPlateforme.map((m) => (
+                    <button type="button" key={m.nom}
+                      className={'seg-btn' + (!autreMut && mutuelleNom === m.nom ? ' active' : '')}
+                      onClick={() => { setMutuelleNom(m.nom); setAutreMut(false) }}>
+                      {m.nom}
+                    </button>
+                  ))}
+                  <button type="button"
+                    className={'seg-btn' + (autreMut ? ' active' : '')}
+                    onClick={() => { setAutreMut(true); setMutuelleNom('') }}>
+                    + Autre mutuelle
+                  </button>
+                </div>
+                {mutuellesDeLaPlateforme.length === 0 && !autreMut && (
+                  <span className="hint">Aucune mutuelle enregistrée pour {plateforme} — utilisez « Autre mutuelle » (et ajoutez-la dans Réglages).</span>
+                )}
+                {autreMut && (
+                  <input className="input" style={{ marginTop: 8 }} value={mutuelleNom}
+                    onChange={(e) => setMutuelleNom(e.target.value)}
+                    placeholder="Nom de la mutuelle" autoFocus />
+                )}
+              </div>
+            )}
+          </>
+        )}
+
+        <div className="field">
+          <label>Vendeur</label>
+          <div className="seg">
+            {settings.vendors.map((v) => (
+              <button type="button" key={v}
+                className={'seg-btn' + (vendor === v ? ' active' : '')}
+                onClick={() => setVendor(v)}>
+                {v}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {showMutuelle && (
-        <label className="check">
-          <input type="checkbox" checked={facture} onChange={(e) => setFacture(e.target.checked)} />
-          Dossier déjà facturé à la mutuelle
-        </label>
-      )}
+        {showMutuelle && (
+          <label className="check">
+            <input type="checkbox" checked={facture} onChange={(e) => setFacture(e.target.checked)} />
+            Dossier déjà facturé à la mutuelle
+          </label>
+        )}
 
-      <div className="row">
-        <button type="submit" className="btn">
-          <Check className="lucide" size={17} />
-          Enregistrer la vente
-        </button>
-      </div>
-    </form>
+        <div className="row">
+          <button type="submit" className="btn">
+            <Check className="lucide" size={17} />
+            Enregistrer
+          </button>
+        </div>
+      </form>
+    </div>
   )
 }
