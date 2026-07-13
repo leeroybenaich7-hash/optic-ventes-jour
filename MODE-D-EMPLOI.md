@@ -31,7 +31,9 @@ Le bandeau du haut montre en permanence où en sont les dossiers.
 1. **À facturer** : le dossier attend d'être envoyé sur la plateforme.
    Après l'avoir facturé, cliquer **« Facturé »** → il passe à l'étape 2.
 2. **Paiements mutuelle** : dossiers facturés dont on attend le virement.
-   Quand la mutuelle a payé, cliquer **« Payé »** → dossier soldé.
+   Quand la mutuelle a payé, cliquer **« Payé »** → dossier soldé. En haut,
+   le **Récap tiers payant** montre, par plateforme, ce qui reste à facturer et
+   à encaisser (le total en cours = ce que chaque tiers payant doit encore).
 3. **Reste à charge** : ce que le client doit encore. Cliquer **« Encaisser »**,
    taper le montant (acompte possible) + moyen de paiement.
 

@@ -6,6 +6,7 @@ import { BadgeEuro, Undo2, CheckCircle2 } from 'lucide-react'
 import { useStore, pendingMutuellePaid } from '../lib/store.jsx'
 import { euro, today, fmtDay, fmtTime, daysAgo, matchClient } from '../lib/format.js'
 import SearchBar from './SearchBar.jsx'
+import TiersPayantRecap from './TiersPayantRecap.jsx'
 
 export default function PaiementsMutuelle() {
   const { sales, markMutuellePaid, notify } = useStore()
@@ -37,6 +38,8 @@ export default function PaiementsMutuelle() {
 
   return (
     <div className="stack">
+      <TiersPayantRecap />
+
       <section className="card">
         <h2 className="card-title">Paiements mutuelle en attente</h2>
         <p className="card-sub">
