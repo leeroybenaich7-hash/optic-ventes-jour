@@ -8,12 +8,13 @@ retrouve à tout moment un client (par son nom ou sa mutuelle).
 Onglet **Ventes du jour** :
 
 1. Nom du client.
-2. **Lunettes** : montant + reste à charge du client.
-3. **Lentilles** : montant + reste à charge du client.
-   (Remplir l'un, l'autre, ou les deux — le total et la part mutuelle se
-   calculent tout seuls.)
-4. Si part mutuelle : taper la **mutuelle** → la **plateforme de tiers payant**
-   se sélectionne toute seule (référencement). Sinon la choisir à la main.
+2. **Lunettes** : montant. **Lentilles** : montant. (L'un, l'autre, ou les deux.)
+   Le **montant total** s'affiche tout seul.
+3. **Reste à charge** : un seul montant, sur le total. La **part mutuelle** se
+   calcule toute seule (total − reste à charge).
+4. S'il y a une part mutuelle : choisir la **plateforme de tiers payant**
+   → elle propose ses **mutuelles**, cliquer celle du client (ou « Autre
+   mutuelle » pour la saisir).
 5. **Encaissé aujourd'hui** : pré-rempli avec le reste à charge. S'il paie
    moins, le solde ira dans « Reste à charge ».
 6. Moyen de paiement + vendeur → **Enregistrer la vente**.
