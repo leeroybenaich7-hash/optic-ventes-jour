@@ -44,9 +44,8 @@ export default function SalesTable({ sales, readOnly }) {
       id: sale.id,
       client: sale.client,
       lunettes_montant: toInput(sale.lunettes_montant),
-      lunettes_reste: toInput(sale.lunettes_reste),
       lentilles_montant: toInput(sale.lentilles_montant),
-      lentilles_reste: toInput(sale.lentilles_reste),
+      reste: toInput(sale.reste),
       mutuelle_nom: sale.mutuelle_nom || '',
       plateforme: sale.plateforme || '',
       vendor: sale.vendor,
@@ -62,9 +61,8 @@ export default function SalesTable({ sales, readOnly }) {
     updateSale(edit.id, {
       client: edit.client.trim(),
       lunettes_montant: parseEuro(edit.lunettes_montant),
-      lunettes_reste: parseEuro(edit.lunettes_reste),
       lentilles_montant: parseEuro(edit.lentilles_montant),
-      lentilles_reste: parseEuro(edit.lentilles_reste),
+      reste: parseEuro(edit.reste),
       mutuelle_nom: edit.mutuelle_nom.trim(),
       plateforme: edit.plateforme,
       vendor: edit.vendor,
@@ -73,10 +71,9 @@ export default function SalesTable({ sales, readOnly }) {
     notify('Vente modifiée')
   }
 
-  const onMutuelleNom = (v) => {
-    const found = (settings.mutuelles || []).find((m) => m.nom.toLowerCase() === v.trim().toLowerCase())
-    setEdit((e) => ({ ...e, mutuelle_nom: v, plateforme: found ? found.plateforme : e.plateforme }))
-  }
+  const mutuellesEdit = edit
+    ? (settings.mutuelles || []).filter((m) => m.plateforme === edit.plateforme)
+    : []
 
   return (
     <>
@@ -162,47 +159,29 @@ export default function SalesTable({ sales, readOnly }) {
                   onChange={(e) => setEdit({ ...edit, client: e.target.value })} />
               </div>
 
-              <div className="poste">
-                <div className="poste-head"><Glasses className="lucide" size={18} /><span>Lunettes</span></div>
-                <div className="grid-2">
+              <div className="grid-2">
+                <div className="poste">
+                  <div className="poste-head"><Glasses className="lucide" size={18} /><span>Lunettes</span></div>
                   <div className="field">
                     <label>Montant (€)</label>
                     <input className="input input-euro" inputMode="decimal" value={edit.lunettes_montant}
                       onChange={(e) => setEdit({ ...edit, lunettes_montant: e.target.value })} />
                   </div>
-                  <div className="field">
-                    <label>Reste à charge (€)</label>
-                    <input className="input input-euro" inputMode="decimal" value={edit.lunettes_reste}
-                      onChange={(e) => setEdit({ ...edit, lunettes_reste: e.target.value })} />
-                  </div>
                 </div>
-              </div>
-
-              <div className="poste">
-                <div className="poste-head"><Eye className="lucide" size={18} /><span>Lentilles</span></div>
-                <div className="grid-2">
+                <div className="poste">
+                  <div className="poste-head"><Eye className="lucide" size={18} /><span>Lentilles</span></div>
                   <div className="field">
                     <label>Montant (€)</label>
                     <input className="input input-euro" inputMode="decimal" value={edit.lentilles_montant}
                       onChange={(e) => setEdit({ ...edit, lentilles_montant: e.target.value })} />
                   </div>
-                  <div className="field">
-                    <label>Reste à charge (€)</label>
-                    <input className="input input-euro" inputMode="decimal" value={edit.lentilles_reste}
-                      onChange={(e) => setEdit({ ...edit, lentilles_reste: e.target.value })} />
-                  </div>
                 </div>
               </div>
 
               <div className="field">
-                <label htmlFor="ed-mut">Mutuelle</label>
-                <input id="ed-mut" className="input" list="mutuelles-list-edit" value={edit.mutuelle_nom}
-                  onChange={(e) => onMutuelleNom(e.target.value)} placeholder="Nom de la mutuelle" autoComplete="off" />
-                <datalist id="mutuelles-list-edit">
-                  {(settings.mutuelles || []).map((m) => (
-                    <option key={m.nom} value={m.nom}>{m.plateforme}</option>
-                  ))}
-                </datalist>
+                <label>Reste à charge total (€)</label>
+                <input className="input input-euro" inputMode="decimal" value={edit.reste}
+                  onChange={(e) => setEdit({ ...edit, reste: e.target.value })} />
               </div>
 
               <div className="field">
@@ -211,12 +190,30 @@ export default function SalesTable({ sales, readOnly }) {
                   {(settings.plateformes || []).map((p) => (
                     <button type="button" key={p}
                       className={'seg-btn' + (edit.plateforme === p ? ' active' : '')}
-                      onClick={() => setEdit({ ...edit, plateforme: p })}>
+                      onClick={() => setEdit({ ...edit, plateforme: p, mutuelle_nom: '' })}>
                       {p}
                     </button>
                   ))}
                 </div>
               </div>
+
+              {edit.plateforme && (
+                <div className="field">
+                  <label>Mutuelle</label>
+                  <div className="seg">
+                    {mutuellesEdit.map((m) => (
+                      <button type="button" key={m.nom}
+                        className={'seg-btn' + (edit.mutuelle_nom === m.nom ? ' active' : '')}
+                        onClick={() => setEdit({ ...edit, mutuelle_nom: m.nom })}>
+                        {m.nom}
+                      </button>
+                    ))}
+                  </div>
+                  <input className="input" style={{ marginTop: 8 }} value={edit.mutuelle_nom}
+                    onChange={(e) => setEdit({ ...edit, mutuelle_nom: e.target.value })}
+                    placeholder="ou saisir une autre mutuelle" autoComplete="off" />
+                </div>
+              )}
 
               <div className="field">
                 <label>Vendeur</label>

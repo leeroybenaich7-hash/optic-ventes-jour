@@ -9,14 +9,12 @@ create table if not exists public.ventes (
   day date not null,
   created_at timestamptz not null default now(),
   client text not null default '',
-  -- Deux postes possibles par vente :
+  -- Deux postes possibles par vente (montant par poste) :
   lunettes_montant numeric not null default 0,
-  lunettes_reste numeric not null default 0,
   lentilles_montant numeric not null default 0,
-  lentilles_reste numeric not null default 0,
   -- Totaux calculés côté app et stockés :
   price numeric not null default 0,
-  reste numeric not null default 0,
+  reste numeric not null default 0,   -- reste à charge client, unique, sur le total
   mutuelle numeric not null default 0,
   mutuelle_nom text not null default '',
   plateforme text not null default '',

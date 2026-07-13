@@ -40,11 +40,10 @@ Forme d'une vente :
   id, day:'YYYY-MM-DD', created_at:ISO,
   client,
   // Deux postes, chacun optionnel (un client peut prendre les deux) :
-  lunettes_montant, lunettes_reste,     // € vendus / reste à charge client
-  lentilles_montant, lentilles_reste,
+  lunettes_montant, lentilles_montant,  // € vendus par poste
   // Totaux calculés et stockés à l'enregistrement :
   price,        // = lunettes_montant + lentilles_montant
-  reste,        // = lunettes_reste + lentilles_reste (reste à charge total)
+  reste,        // reste à charge client, UNIQUE, sur le total
   mutuelle,     // = price - reste (part prise en charge par la mutuelle)
   mutuelle_nom, // organisme (ex. Harmonie Mutuelle)
   plateforme,   // tiers payant sur lequel on facture (ex. Viamedis)
@@ -159,11 +158,9 @@ export function StoreProvider({ children }) {
   const addSale = useCallback(
     (data) => {
       const lm = Number(data.lunettes_montant) || 0
-      const lr = Number(data.lunettes_reste) || 0
       const ltm = Number(data.lentilles_montant) || 0
-      const ltr = Number(data.lentilles_reste) || 0
       const price = Math.round((lm + ltm) * 100) / 100
-      const reste = Math.round((lr + ltr) * 100) / 100
+      const reste = Math.min(price, Math.max(0, Math.round((Number(data.reste) || 0) * 100) / 100))
       const mutuelle = Math.max(0, Math.round((price - reste) * 100) / 100)
       const sale = {
         id: uid(),
@@ -171,9 +168,7 @@ export function StoreProvider({ children }) {
         created_at: new Date().toISOString(),
         client: data.client?.trim() || 'Client',
         lunettes_montant: lm,
-        lunettes_reste: lr,
         lentilles_montant: ltm,
-        lentilles_reste: ltr,
         price,
         reste,
         mutuelle,
@@ -299,34 +294,35 @@ export function useStore() {
   return ctx
 }
 
-// recalcule price/reste/mutuelle après une modification
+// recalcule price/mutuelle après une modification (reste = saisi tel quel)
 function recompute(s) {
   const lm = Number(s.lunettes_montant) || 0
-  const lr = Number(s.lunettes_reste) || 0
   const ltm = Number(s.lentilles_montant) || 0
-  const ltr = Number(s.lentilles_reste) || 0
   const price = Math.round((lm + ltm) * 100) / 100
-  const reste = Math.round((lr + ltr) * 100) / 100
+  const reste = Math.min(price, Math.max(0, Math.round((Number(s.reste) || 0) * 100) / 100))
   return { ...s, price, reste, mutuelle: Math.max(0, Math.round((price - reste) * 100) / 100) }
 }
 
-// remet une vente ancienne (ancien modèle « type unique ») au bon format
+// remet une vente ancienne au bon format (ancien modèle « type unique »
+// ou modèle v3 avec reste par poste → reste total)
 function normalizeSale(s) {
-  if (s.lunettes_montant != null || s.lentilles_montant != null) return s
-  const price = Number(s.price) || 0
-  const reste = Number(s.reste) || 0
-  const isLent = s.type === 'lentilles'
-  return {
-    ...s,
-    lunettes_montant: isLent ? 0 : price,
-    lunettes_reste: isLent ? 0 : reste,
-    lentilles_montant: isLent ? price : 0,
-    lentilles_reste: isLent ? reste : 0,
-    facture: s.facture != null ? s.facture : !!s.teletrans,
-    facture_at: s.facture_at != null ? s.facture_at : s.teletrans_at || null,
-    mutuelle_paid: !!s.mutuelle_paid,
-    mutuelle_paid_at: s.mutuelle_paid_at || null,
+  const out = { ...s }
+  if (out.lunettes_montant == null && out.lentilles_montant == null) {
+    // très ancien modèle : un seul type
+    const price = Number(s.price) || 0
+    const isLent = s.type === 'lentilles'
+    out.lunettes_montant = isLent ? 0 : price
+    out.lentilles_montant = isLent ? price : 0
   }
+  // reste total : garde s.reste s'il existe, sinon somme des restes par poste (v3)
+  if (out.reste == null) {
+    out.reste = (Number(s.lunettes_reste) || 0) + (Number(s.lentilles_reste) || 0)
+  }
+  out.facture = s.facture != null ? s.facture : !!s.teletrans
+  out.facture_at = s.facture_at != null ? s.facture_at : s.teletrans_at || null
+  out.mutuelle_paid = !!s.mutuelle_paid
+  out.mutuelle_paid_at = s.mutuelle_paid_at || null
+  return out
 }
 
 function rowToSale(r) {
@@ -336,9 +332,7 @@ function rowToSale(r) {
     created_at: r.created_at,
     client: r.client,
     lunettes_montant: Number(r.lunettes_montant) || 0,
-    lunettes_reste: Number(r.lunettes_reste) || 0,
     lentilles_montant: Number(r.lentilles_montant) || 0,
-    lentilles_reste: Number(r.lentilles_reste) || 0,
     price: Number(r.price) || 0,
     reste: Number(r.reste) || 0,
     mutuelle: Number(r.mutuelle) || 0,
@@ -359,9 +353,7 @@ function saleToRow(s) {
     created_at: s.created_at,
     client: s.client,
     lunettes_montant: s.lunettes_montant,
-    lunettes_reste: s.lunettes_reste,
     lentilles_montant: s.lentilles_montant,
-    lentilles_reste: s.lentilles_reste,
     price: s.price,
     reste: s.reste,
     mutuelle: s.mutuelle,
