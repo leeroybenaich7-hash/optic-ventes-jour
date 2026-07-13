@@ -282,6 +282,31 @@ input, select, textarea { font-family: inherit; }
 }
 .poste-head .lucide { color: var(--accent); }
 
+/* total de la vente en gros */
+.total-hero {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  background: var(--accent-soft);
+  border-radius: 13px; padding: 14px 18px;
+}
+.total-hero-lbl {
+  font-size: 12px; text-transform: uppercase; letter-spacing: .14em;
+  color: var(--muted); font-weight: 600;
+}
+.total-hero-val {
+  font-family: var(--serif);
+  font-size: 40px; font-weight: 600; line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+/* champ calculé en lecture seule (part mutuelle) */
+.readonly-val {
+  display: flex; align-items: center; justify-content: flex-end;
+  background: var(--panel-2); color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 /* bloc récap calculé (total / reste / mutuelle) */
 .recap {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;

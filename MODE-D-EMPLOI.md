@@ -9,15 +9,17 @@ Onglet **Ventes du jour** :
 
 1. Nom du client.
 2. **Lunettes** : montant. **Lentilles** : montant. (L'un, l'autre, ou les deux.)
-   Le **montant total** s'affiche tout seul.
+   Le **Total de la vente** s'affiche en gros.
 3. **Reste à charge** : un seul montant, sur le total. La **part mutuelle** se
    calcule toute seule (total − reste à charge).
 4. S'il y a une part mutuelle : choisir la **plateforme de tiers payant**
    → elle propose ses **mutuelles**, cliquer celle du client (ou « Autre
    mutuelle » pour la saisir).
-5. **Encaissé aujourd'hui** : pré-rempli avec le reste à charge. S'il paie
-   moins, le solde ira dans « Reste à charge ».
-6. Moyen de paiement + vendeur → **Enregistrer la vente**.
+5. Vendeur → **Enregistrer la vente**.
+
+> Le client ne paie rien à la vente : il règle son reste à charge **au retrait**
+> de ses lunettes/lentilles. Ce reste part automatiquement dans l'onglet
+> **Reste à charge** — c'est là qu'on l'encaisse le jour du retrait.
 
 ## Le circuit d'un dossier mutuelle (3 étapes)
 

@@ -1,12 +1,13 @@
 // Formulaire de saisie d'une vente — pensé pour aller vite.
 // Lunettes et Lentilles ont chacun leur montant ; le total est la
-// somme des deux. Le reste à charge est UNIQUE, sur ce total, et la
-// part mutuelle en découle. On choisit d'abord la plateforme de
-// tiers payant, qui propose alors ses mutuelles.
+// somme des deux, affiché en gros. Le reste à charge est UNIQUE,
+// sur ce total. Le client ne paie RIEN à la vente : il règle son
+// reste à charge à la récupération → il part dans « Reste à charge ».
+// On choisit la plateforme de tiers payant, qui propose ses mutuelles.
 import React, { useMemo, useRef, useState } from 'react'
 import { Glasses, Eye, Check } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
-import { euro, parseEuro, uid } from '../lib/format.js'
+import { euro, parseEuro } from '../lib/format.js'
 
 export default function SaleForm() {
   const { settings, addSale, notify } = useStore()
@@ -18,10 +19,7 @@ export default function SaleForm() {
   const [reste, setReste] = useState('')
   const [plateforme, setPlateforme] = useState('')
   const [mutuelleNom, setMutuelleNom] = useState('')
-  const [autreMut, setAutreMut] = useState(false) // mutuelle non listée
-  const [encaisse, setEncaisse] = useState('')
-  const [encTouched, setEncTouched] = useState(false)
-  const [method, setMethod] = useState(settings.methods[0] || 'CB')
+  const [autreMut, setAutreMut] = useState(false)
   const [vendor, setVendor] = useState(null)
   const [facture, setFacture] = useState(false)
 
@@ -29,9 +27,6 @@ export default function SaleForm() {
   const resteNum = Math.min(total, parseEuro(reste))
   const partMutuelle = Math.max(0, Math.round((total - resteNum) * 100) / 100)
 
-  const encaisseShown = encTouched ? encaisse : (resteNum > 0 ? toInput(resteNum) : '')
-
-  // mutuelles proposées par la plateforme choisie
   const mutuellesDeLaPlateforme = useMemo(
     () => (settings.mutuelles || []).filter((m) => m.plateforme === plateforme),
     [settings.mutuelles, plateforme]
@@ -47,8 +42,6 @@ export default function SaleForm() {
     setClient('')
     setLuM(''); setLeM(''); setReste('')
     setPlateforme(''); setMutuelleNom(''); setAutreMut(false)
-    setEncaisse(''); setEncTouched(false)
-    setMethod(settings.methods[0] || 'CB')
     setVendor(null)
     setFacture(false)
     clientRef.current?.focus()
@@ -78,7 +71,7 @@ export default function SaleForm() {
       return
     }
 
-    const montant = encTouched ? parseEuro(encaisse) : resteNum
+    // Aucun encaissement à la vente : le reste à charge se règle au retrait.
     addSale({
       client: client.trim(),
       lunettes_montant: parseEuro(luM),
@@ -88,17 +81,13 @@ export default function SaleForm() {
       plateforme,
       vendor,
       facture,
-      payments:
-        montant > 0
-          ? [{ id: uid(), at: new Date().toISOString(), amount: montant, method }]
-          : [],
+      payments: [],
     })
     reset()
     notify('Vente enregistrée')
   }
 
   const showMutuelle = partMutuelle > 0
-  const showMethod = parseEuro(encaisseShown) > 0
 
   return (
     <form className="stack" onSubmit={onSubmit}>
@@ -128,15 +117,24 @@ export default function SaleForm() {
         </div>
       </div>
 
-      {/* Total + reste à charge unique + part mutuelle */}
-      <div className="recap">
-        <div><span className="recap-lbl">Montant total</span><span className="recap-val">{euro(total)}</span></div>
-        <div className="field" style={{ gap: 4 }}>
-          <label htmlFor="sf-reste" className="recap-lbl">Reste à charge (€)</label>
+      {/* Total en gros */}
+      <div className="total-hero">
+        <span className="total-hero-lbl">Total de la vente</span>
+        <span className="total-hero-val">{euro(total)}</span>
+      </div>
+
+      {/* Reste à charge (réglé au retrait) + part mutuelle */}
+      <div className="grid-2">
+        <div className="field">
+          <label htmlFor="sf-reste">Reste à charge (€)</label>
           <input id="sf-reste" className="input input-euro" inputMode="decimal"
             value={reste} onChange={(e) => setReste(e.target.value)} placeholder="0" />
+          <span className="hint">Réglé par le client au retrait — retrouvé dans « Reste à charge ».</span>
         </div>
-        <div><span className="recap-lbl">Part mutuelle</span><span className="recap-val">{euro(partMutuelle)}</span></div>
+        <div className="field">
+          <label>Part mutuelle (€)</label>
+          <div className="input input-euro readonly-val">{euro(partMutuelle)}</div>
+        </div>
       </div>
 
       {/* Plateforme -> ses mutuelles */}
@@ -185,30 +183,6 @@ export default function SaleForm() {
         </>
       )}
 
-      {/* Encaissement du reste à charge */}
-      <div className="field">
-        <label htmlFor="sf-encaisse">Encaissé aujourd'hui (€)</label>
-        <input id="sf-encaisse" className="input input-euro" inputMode="decimal"
-          value={encaisseShown}
-          onChange={(e) => { setEncaisse(e.target.value); setEncTouched(true) }} placeholder="0" />
-        <span className="hint">S'il paie moins que son reste à charge, le solde va dans « Reste à charge ».</span>
-      </div>
-
-      {showMethod && (
-        <div className="field">
-          <label>Moyen de paiement</label>
-          <div className="seg">
-            {settings.methods.map((m) => (
-              <button type="button" key={m}
-                className={'seg-btn' + (method === m ? ' active' : '')}
-                onClick={() => setMethod(m)}>
-                {m}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       <div className="field">
         <label>Vendeur</label>
         <div className="seg">
@@ -237,10 +211,4 @@ export default function SaleForm() {
       </div>
     </form>
   )
-}
-
-function toInput(n) {
-  const r = Math.round((Number(n) || 0) * 100) / 100
-  if (r <= 0) return ''
-  return Number.isInteger(r) ? String(r) : String(r).replace('.', ',')
 }

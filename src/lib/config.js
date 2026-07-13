@@ -10,4 +10,4 @@ export const SUPABASE_ANON_KEY = ''
 
 // Version affichée en bas de page — à augmenter à chaque déploiement
 // pour forcer le rafraîchissement du cache.
-export const APP_VERSION = '5'
+export const APP_VERSION = '6'
