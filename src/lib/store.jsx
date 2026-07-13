@@ -25,6 +25,7 @@ const LS_UNLOCKED = 'ocvj_unlocked'
 export const DEFAULT_SETTINGS = {
   vendors: ['Maman', 'Binesa', 'Nadia'],
   methods: ['CB', 'Espèces', 'Chèque', 'Virement'],
+  plateformes: ['Viamedis', 'Almerys', 'Carte Blanche', 'Itelis', 'Santéclair', 'Kalixia', 'Autre'],
   accessCode: '1234',
 }
 
@@ -38,9 +39,11 @@ Forme d'une vente :
   type: 'lunettes' | 'lentilles',
   price: number,              // prix total
   mutuelle: number,           // part mutuelle
+  mutuelle_nom: string,       // nom de la mutuelle (obligatoire si part mutuelle > 0)
+  plateforme: string,         // plateforme tiers payant (obligatoire si part mutuelle > 0)
   reste: number,              // reste à charge client
   vendor: string,
-  teletrans: boolean,         // télétransmission mutuelle faite ?
+  teletrans: boolean,         // facturation mutuelle faite ?
   teletrans_at: ISO | null,
   payments: [{ id, at: ISO, amount: number, method: string }],
 }
@@ -148,6 +151,8 @@ export function StoreProvider({ children }) {
         type: data.type,
         price: Number(data.price) || 0,
         mutuelle: Number(data.mutuelle) || 0,
+        mutuelle_nom: data.mutuelle_nom?.trim() || '',
+        plateforme: data.plateforme || '',
         reste: Number(data.reste) || 0,
         vendor: data.vendor || '',
         teletrans: !!data.teletrans,
@@ -268,6 +273,8 @@ function rowToSale(r) {
     type: r.type,
     price: Number(r.price),
     mutuelle: Number(r.mutuelle),
+    mutuelle_nom: r.mutuelle_nom || '',
+    plateforme: r.plateforme || '',
     reste: Number(r.reste),
     vendor: r.vendor || '',
     teletrans: !!r.teletrans,
@@ -284,6 +291,8 @@ function saleToRow(s) {
     type: s.type,
     price: s.price,
     mutuelle: s.mutuelle,
+    mutuelle_nom: s.mutuelle_nom || '',
+    plateforme: s.plateforme || '',
     reste: s.reste,
     vendor: s.vendor,
     teletrans: s.teletrans,

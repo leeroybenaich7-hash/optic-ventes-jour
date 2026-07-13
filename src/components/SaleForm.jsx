@@ -21,6 +21,8 @@ export default function SaleForm() {
   const [type, setType] = useState(null)
   const [price, setPrice] = useState('')
   const [mutuelle, setMutuelle] = useState('')
+  const [mutuelleNom, setMutuelleNom] = useState('')
+  const [plateforme, setPlateforme] = useState(null)
   const [reste, setReste] = useState('')
   const [encaisse, setEncaisse] = useState('')
   const [method, setMethod] = useState(settings.methods[0] || 'CB')
@@ -64,6 +66,8 @@ export default function SaleForm() {
     setType(null)
     setPrice('')
     setMutuelle('')
+    setMutuelleNom('')
+    setPlateforme(null)
     setReste('')
     setEncaisse('')
     setMethod(settings.methods[0] || 'CB')
@@ -89,6 +93,14 @@ export default function SaleForm() {
       notify('Indiquez le prix total de la vente')
       return
     }
+    if (parseEuro(mutuelle) > 0 && !mutuelleNom.trim()) {
+      notify('Indiquez le nom de la mutuelle')
+      return
+    }
+    if (parseEuro(mutuelle) > 0 && !plateforme) {
+      notify('Choisissez la plateforme de la mutuelle')
+      return
+    }
     if (!vendor) {
       notify('Choisissez le vendeur')
       return
@@ -100,6 +112,8 @@ export default function SaleForm() {
       type,
       price: parseEuro(price),
       mutuelle: parseEuro(mutuelle),
+      mutuelle_nom: parseEuro(mutuelle) > 0 ? mutuelleNom.trim() : '',
+      plateforme: parseEuro(mutuelle) > 0 ? plateforme : '',
       reste: parseEuro(reste),
       vendor,
       teletrans: parseEuro(mutuelle) > 0 ? teletrans : false,
@@ -188,6 +202,36 @@ export default function SaleForm() {
         </div>
       </div>
 
+      {showTeletrans && (
+        <div className="grid-2">
+          <div className="field">
+            <label htmlFor="sf-mutnom">Mutuelle (obligatoire)</label>
+            <input
+              id="sf-mutnom"
+              className="input"
+              value={mutuelleNom}
+              onChange={(e) => setMutuelleNom(e.target.value)}
+              placeholder="Ex. Harmonie Mutuelle"
+            />
+          </div>
+          <div className="field">
+            <label>Plateforme (obligatoire)</label>
+            <div className="seg">
+              {(settings.plateformes || []).map((p) => (
+                <button
+                  type="button"
+                  key={p}
+                  className={'seg-btn' + (plateforme === p ? ' active' : '')}
+                  onClick={() => setPlateforme(p)}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="field">
         <label htmlFor="sf-encaisse">Montant encaissé aujourd'hui (€)</label>
         <input
@@ -198,7 +242,7 @@ export default function SaleForm() {
           onChange={(e) => onEncaisse(e.target.value)}
           placeholder="0"
         />
-        <span className="hint">S'il paie moins, le reste passe dans À encaisser</span>
+        <span className="hint">S'il paie moins, le reste passe dans l'onglet Reste à charge</span>
       </div>
 
       {showMethod && (
@@ -242,7 +286,7 @@ export default function SaleForm() {
             checked={teletrans}
             onChange={(e) => setTeletrans(e.target.checked)}
           />
-          Télétransmission mutuelle déjà faite
+          Facturation mutuelle déjà faite
         </label>
       )}
 

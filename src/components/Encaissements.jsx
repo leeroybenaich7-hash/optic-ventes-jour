@@ -25,10 +25,10 @@ export default function Encaissements() {
   return (
     <div className="stack">
       <div className="card">
-        <h2 className="card-title">Restes à encaisser</h2>
+        <h2 className="card-title">Restes à charge à encaisser</h2>
         <p className="card-sub">
-          Les clients qui n'ont pas fini de payer leur part. Rien ne disparaît
-          d'ici tant que ce n'est pas soldé.
+          Les clients qui n'ont pas fini de payer leur reste à charge. Rien ne
+          disparaît d'ici tant que ce n'est pas soldé.
         </p>
 
         {list.length === 0 ? (

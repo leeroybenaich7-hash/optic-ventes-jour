@@ -110,6 +110,18 @@ export default function Reglages() {
       />
 
       <ListEditor
+        title="Plateformes tiers payant"
+        sub="Les plateformes proposées quand une vente a une part mutuelle (Viamedis, Almerys…)."
+        items={settings.plateformes || []}
+        addLabel="Plateforme à ajouter"
+        confirmMsg={(p) => `Retirer la plateforme « ${p} » ?`}
+        onSave={(plateformes, msg) => {
+          saveSettings({ plateformes })
+          notify(msg)
+        }}
+      />
+
+      <ListEditor
         title="Moyens de paiement"
         sub="Les choix proposés au moment d’encaisser."
         items={settings.methods}

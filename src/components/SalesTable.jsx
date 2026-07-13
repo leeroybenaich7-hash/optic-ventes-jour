@@ -39,6 +39,8 @@ export default function SalesTable({ sales, readOnly }) {
       price: toInput(sale.price),
       mutuelle: toInput(sale.mutuelle),
       reste: toInput(sale.reste),
+      mutuelle_nom: sale.mutuelle_nom || '',
+      plateforme: sale.plateforme || '',
       vendor: sale.vendor,
     })
   }
@@ -54,6 +56,8 @@ export default function SalesTable({ sales, readOnly }) {
       type: edit.type,
       price: parseEuro(edit.price),
       mutuelle: parseEuro(edit.mutuelle),
+      mutuelle_nom: edit.mutuelle_nom.trim(),
+      plateforme: edit.plateforme,
       reste: parseEuro(edit.reste),
       vendor: edit.vendor,
     })
@@ -76,7 +80,7 @@ export default function SalesTable({ sales, readOnly }) {
               <th className="num">Reste à charge</th>
               <th>Encaissement</th>
               <th>Paiement</th>
-              <th>Télétransmission</th>
+              <th>Facturation</th>
               {!readOnly && <th />}
             </tr>
           </thead>
@@ -97,7 +101,14 @@ export default function SalesTable({ sales, readOnly }) {
                   </td>
                   <td>{s.vendor}</td>
                   <td className="num">{euro(s.price)}</td>
-                  <td className="num">{euro(s.mutuelle)}</td>
+                  <td className="num">
+                    {euro(s.mutuelle)}
+                    {(s.mutuelle_nom || s.plateforme) && (
+                      <div className="small muted" style={{ whiteSpace: 'nowrap' }}>
+                        {[s.mutuelle_nom, s.plateforme].filter(Boolean).join(' · ')}
+                      </div>
+                    )}
+                  </td>
                   <td className="num">{euro(s.reste)}</td>
                   <td>
                     {due > 0 ? (
@@ -224,6 +235,33 @@ export default function SalesTable({ sales, readOnly }) {
               </div>
 
               <div className="field">
+                <label htmlFor="ed-mutnom">Mutuelle</label>
+                <input
+                  id="ed-mutnom"
+                  className="input"
+                  value={edit.mutuelle_nom}
+                  onChange={(e) => setEdit({ ...edit, mutuelle_nom: e.target.value })}
+                  placeholder="Nom de la mutuelle"
+                />
+              </div>
+
+              <div className="field">
+                <label>Plateforme</label>
+                <div className="seg">
+                  {(settings.plateformes || []).map((p) => (
+                    <button
+                      type="button"
+                      key={p}
+                      className={'seg-btn' + (edit.plateforme === p ? ' active' : '')}
+                      onClick={() => setEdit({ ...edit, plateforme: p })}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="field">
                 <label>Vendeur</label>
                 <div className="seg">
                   {settings.vendors.map((v) => (
@@ -239,7 +277,7 @@ export default function SalesTable({ sales, readOnly }) {
                 </div>
               </div>
 
-              <p className="hint">Les paiements se gèrent dans l'onglet « À encaisser ».</p>
+              <p className="hint">Les paiements se gèrent dans l'onglet « Reste à charge ».</p>
 
               <div className="row">
                 <button type="submit" className="btn">

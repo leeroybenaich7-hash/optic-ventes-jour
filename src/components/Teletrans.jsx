@@ -1,5 +1,5 @@
-// Onglet « À télétransmettre » : dossiers mutuelle non pointés,
-// même ceux des jours précédents, + les pointages du jour (annulables).
+// Onglet « À facturer » : dossiers mutuelle non facturés,
+// même ceux des jours précédents, + les facturations du jour (annulables).
 import React from 'react'
 import { Send, Undo2, CheckCircle2 } from 'lucide-react'
 import { useStore, pendingTeletrans } from '../lib/store.jsx'
@@ -30,27 +30,27 @@ export default function Teletrans() {
 
   const pointer = (vente) => {
     markTeletrans(vente.id)
-    notify('Télétransmission pointée — ' + vente.client)
+    notify('Facturation pointée — ' + vente.client)
   }
 
   const annuler = (vente) => {
     markTeletrans(vente.id, false)
-    notify('Pointage annulé — ' + vente.client)
+    notify('Facturation annulée — ' + vente.client)
   }
 
   return (
     <div className="stack">
       <section className="card">
-        <h2 className="card-title">Télétransmissions mutuelle en attente</h2>
+        <h2 className="card-title">Factures mutuelle à faire</h2>
         <p className="card-sub">
-          Une vente reste dans cette liste tant que sa télétransmission n’est pas
-          pointée — même les jours suivants, rien ne se perd.
+          Une vente reste dans cette liste tant que sa facturation mutuelle n’est
+          pas pointée — même les jours suivants, rien ne se perd.
         </p>
 
         {attente.length === 0 ? (
           <div className="empty">
             <CheckCircle2 className="lucide" />
-            <p>Tout est télétransmis. Rien à envoyer.</p>
+            <p>Tout est facturé. Rien en attente.</p>
           </div>
         ) : (
           <>
@@ -61,6 +61,8 @@ export default function Teletrans() {
                     <th>Date</th>
                     <th>Heure</th>
                     <th>Client</th>
+                    <th>Mutuelle</th>
+                    <th>Plateforme</th>
                     <th>Vendeur</th>
                     <th className="num">Part mutuelle</th>
                     <th></th>
@@ -85,6 +87,14 @@ export default function Teletrans() {
                         </td>
                         <td>{fmtTime(v.created_at)}</td>
                         <td>{v.client}</td>
+                        <td>{v.mutuelle_nom || '—'}</td>
+                        <td>
+                          {v.plateforme ? (
+                            <span className="pill pill-teal">{v.plateforme}</span>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
                         <td>{v.vendor || '—'}</td>
                         <td className="num">{euro(v.mutuelle)}</td>
                         <td className="num">
@@ -94,7 +104,7 @@ export default function Teletrans() {
                             onClick={() => pointer(v)}
                           >
                             <Send className="lucide" size={15} />
-                            Télétransmis
+                            Facturé
                           </button>
                         </td>
                       </tr>
@@ -105,7 +115,7 @@ export default function Teletrans() {
             </div>
             <p className="small muted" style={{ marginTop: 12 }}>
               {attente.length} dossier{attente.length > 1 ? 's' : ''} ·{' '}
-              {euro(totalMutuelle)} de part mutuelle en attente
+              {euro(totalMutuelle)} de part mutuelle à facturer
             </p>
           </>
         )}
@@ -113,17 +123,18 @@ export default function Teletrans() {
 
       {pointees.length > 0 && (
         <section className="card">
-          <h2 className="card-title">Pointées aujourd’hui</h2>
+          <h2 className="card-title">Facturées aujourd’hui</h2>
           <p className="card-sub">
-            En cas d’erreur de clic, vous pouvez annuler un pointage : la vente
-            reviendra dans la liste d’attente.
+            En cas d’erreur de clic, vous pouvez annuler : la vente reviendra
+            dans la liste des factures à faire.
           </p>
           <div className="table-wrap">
             <table className="data">
               <thead>
                 <tr>
-                  <th>Pointée à</th>
+                  <th>Facturée à</th>
                   <th>Client</th>
+                  <th>Mutuelle</th>
                   <th>Vendeur</th>
                   <th className="num">Part mutuelle</th>
                   <th></th>
@@ -139,6 +150,7 @@ export default function Teletrans() {
                       </span>
                     </td>
                     <td>{v.client}</td>
+                    <td>{v.mutuelle_nom || '—'}</td>
                     <td>{v.vendor || '—'}</td>
                     <td className="num">{euro(v.mutuelle)}</td>
                     <td className="num">

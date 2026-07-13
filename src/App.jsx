@@ -20,8 +20,8 @@ import Reglages from './components/Reglages.jsx'
 
 const TABS = [
   { id: 'jour', label: 'Ventes du jour', icon: LayoutDashboard },
-  { id: 'teletrans', label: 'À télétransmettre', icon: Send },
-  { id: 'encaisser', label: 'À encaisser', icon: Wallet },
+  { id: 'teletrans', label: 'À facturer', icon: Send },
+  { id: 'encaisser', label: 'Reste à charge', icon: Wallet },
   { id: 'historique', label: 'Historique', icon: CalendarDays },
   { id: 'reglages', label: 'Réglages', icon: Settings },
 ]
@@ -56,10 +56,10 @@ export default function App() {
             {nbTeletrans ? <AlertTriangle className="lucide" size={15} /> : <CheckCircle2 className="lucide" size={15} />}
             {nbTeletrans ? (
               <span>
-                <strong>{nbTeletrans}</strong> télétransmission{nbTeletrans > 1 ? 's' : ''} en attente
+                <strong>{nbTeletrans}</strong> facture{nbTeletrans > 1 ? 's' : ''} mutuelle à faire
               </span>
             ) : (
-              <span>Télétransmissions à jour</span>
+              <span>Facturation à jour</span>
             )}
           </button>
           <span className="ribbon-sep" />
@@ -71,7 +71,7 @@ export default function App() {
             {nbDue ? <AlertTriangle className="lucide" size={15} /> : <CheckCircle2 className="lucide" size={15} />}
             {nbDue ? (
               <span>
-                <strong>{nbDue}</strong> reste{nbDue > 1 ? 's' : ''} à encaisser
+                <strong>{nbDue}</strong> reste{nbDue > 1 ? 's' : ''} à charge à encaisser
               </span>
             ) : (
               <span>Tout est encaissé</span>

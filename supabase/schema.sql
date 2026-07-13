@@ -12,6 +12,8 @@ create table if not exists public.ventes (
   type text not null check (type in ('lunettes', 'lentilles')),
   price numeric not null default 0,
   mutuelle numeric not null default 0,
+  mutuelle_nom text not null default '',
+  plateforme text not null default '',
   reste numeric not null default 0,
   vendor text not null default '',
   teletrans boolean not null default false,

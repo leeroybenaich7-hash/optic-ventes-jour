@@ -349,7 +349,7 @@ export default function Historique() {
               <div className="kpi-value">
                 {euro(mutuelleTotal)}
               </div>
-              <div className="kpi-note">à télétransmettre</div>
+              <div className="kpi-note">à facturer aux mutuelles</div>
             </div>
             <div className="kpi" style={{ '--kpi-color': '#F7786F' }}>
               <div className="kpi-label">Encaissé sur la période</div>
