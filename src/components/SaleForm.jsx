@@ -16,7 +16,8 @@ export default function SaleForm({ type }) {
   const titre = estLunettes ? 'Nouvelle vente Lunettes' : 'Nouvelle vente Lentilles'
   const Icon = estLunettes ? Glasses : Eye
 
-  const [client, setClient] = useState('')
+  const [nom, setNom] = useState('')
+  const [prenom, setPrenom] = useState('')
   const [prix, setPrix] = useState('')
   const [mutuelle, setMutuelle] = useState('')
   const [plateforme, setPlateforme] = useState('')
@@ -45,7 +46,7 @@ export default function SaleForm({ type }) {
   }
 
   function reset() {
-    setClient('')
+    setNom(''); setPrenom('')
     setPrix(''); setMutuelle('')
     setPlateforme(''); setMutuelleNom(''); setAutreMut(false)
     setVendor(null)
@@ -55,9 +56,11 @@ export default function SaleForm({ type }) {
     clientRef.current?.focus()
   }
 
+  const clientName = [nom.trim(), prenom.trim()].filter(Boolean).join(' ')
+
   function onSubmit(e) {
     e.preventDefault()
-    if (!client.trim()) {
+    if (!nom.trim()) {
       notify('Indiquez le nom du client')
       clientRef.current?.focus()
       return
@@ -80,7 +83,7 @@ export default function SaleForm({ type }) {
     }
 
     addSale({
-      client: client.trim(),
+      client: clientName,
       lunettes_montant: estLunettes ? prixNum : 0,
       lentilles_montant: estLunettes ? 0 : prixNum,
       reste,
@@ -106,10 +109,17 @@ export default function SaleForm({ type }) {
         {titre}
       </h2>
       <form className="stack" onSubmit={onSubmit}>
-        <div className="field">
-          <label>Nom du client</label>
-          <input ref={clientRef} className="input" value={client}
-            onChange={(e) => setClient(e.target.value)} placeholder="Ex. Mme Cohen" />
+        <div className="grid-2">
+          <div className="field">
+            <label>Nom</label>
+            <input ref={clientRef} className="input" value={nom}
+              onChange={(e) => setNom(e.target.value)} placeholder="Ex. Cohen" />
+          </div>
+          <div className="field">
+            <label>Prénom</label>
+            <input className="input" value={prenom}
+              onChange={(e) => setPrenom(e.target.value)} placeholder="Ex. Sarah" />
+          </div>
         </div>
 
         <div className="field">
