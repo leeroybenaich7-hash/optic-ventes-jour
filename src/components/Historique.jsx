@@ -1,9 +1,11 @@
 // Onglet « Historique » : navigation par jour ou par période,
 // compteurs, graphique CA par jour, répartitions et tableau en lecture seule.
 import React, { useMemo, useState } from 'react'
-import { CalendarSearch } from 'lucide-react'
+import { CalendarSearch, FileSpreadsheet } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
 import { euro, today, fmtDay, matchClient } from '../lib/format.js'
+import { PRODUCT_NAME, EXPORT_PREFIX } from '../lib/config.js'
+import { exportMoisExcel } from '../lib/exportExcel.js'
 import SalesTable from './SalesTable.jsx'
 import SearchBar from './SearchBar.jsx'
 
@@ -163,10 +165,16 @@ const QUICK = [
 ]
 
 export default function Historique() {
-  const { sales } = useStore()
+  const { sales, settings, notify } = useStore()
   // sélection : { mode:'day', day } ou { mode:'range', nb }
   const [sel, setSel] = useState({ mode: 'day', day: today() })
   const [q, setQ] = useState('')
+  const [mois, setMois] = useState(today().slice(0, 7))
+
+  function exporter() {
+    const n = exportMoisExcel({ mois, sales, settings, produit: PRODUCT_NAME, prefixe: EXPORT_PREFIX })
+    notify(n > 0 ? `Excel du mois exporté (${n} vente${n > 1 ? 's' : ''})` : 'Aucune vente ce mois-ci')
+  }
 
   const quickActive =
     sel.mode === 'day' && sel.day === today()
@@ -270,6 +278,30 @@ export default function Historique() {
 
   return (
     <div className="stack">
+      {/* -------- export Excel du mois -------- */}
+      <section className="card">
+        <h2 className="card-title">
+          <FileSpreadsheet className="lucide" size={19} style={{ verticalAlign: '-3px', marginRight: 8, color: 'var(--accent)' }} />
+          Export Excel du mois
+        </h2>
+        <p className="card-sub">
+          Un fichier Excel avec 3 onglets : les ventes détaillées, les tiers payants, et le résumé du mois.
+        </p>
+        <div className="row" style={{ flexWrap: 'wrap', gap: 12 }}>
+          <div className="field" style={{ minWidth: 190 }}>
+            <label htmlFor="hist-mois">Mois</label>
+            <input id="hist-mois" type="month" className="input" max={today().slice(0, 7)}
+              value={mois} onChange={(e) => e.target.value && setMois(e.target.value)} />
+          </div>
+          <div className="field" style={{ justifyContent: 'flex-end' }}>
+            <button type="button" className="btn" onClick={exporter}>
+              <FileSpreadsheet className="lucide" size={17} />
+              Exporter le mois (Excel)
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* -------- navigation dans le temps -------- */}
       <section className="card">
         <h2 className="card-title">Choisir un jour ou une période</h2>

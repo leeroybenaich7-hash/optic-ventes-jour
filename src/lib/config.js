@@ -8,6 +8,9 @@
 export const SUPABASE_URL = ''
 export const SUPABASE_ANON_KEY = ''
 
+export const PRODUCT_NAME = 'Optic City'
+export const EXPORT_PREFIX = 'optic-city'
+
 // Version affichée en bas de page — à augmenter à chaque déploiement
 // pour forcer le rafraîchissement du cache.
-export const APP_VERSION = '12'
+export const APP_VERSION = '13'
