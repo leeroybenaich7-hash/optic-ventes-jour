@@ -7,7 +7,7 @@
 import React, { useMemo, useRef, useState } from 'react'
 import { Glasses, Eye, Check } from 'lucide-react'
 import { useStore } from '../lib/store.jsx'
-import { euro, parseEuro } from '../lib/format.js'
+import { euro, parseEuro, uid } from '../lib/format.js'
 
 export default function SaleForm({ type }) {
   const { settings, addSale, notify } = useStore()
@@ -24,10 +24,14 @@ export default function SaleForm({ type }) {
   const [autreMut, setAutreMut] = useState(false)
   const [vendor, setVendor] = useState(null)
   const [facture, setFacture] = useState(false)
+  const [acompte, setAcompte] = useState('')
+  const [method, setMethod] = useState(settings.methods[0] || 'Espèces')
 
   const prixNum = parseEuro(prix)
   const mutNum = Math.min(prixNum, parseEuro(mutuelle))
   const reste = Math.max(0, Math.round((prixNum - mutNum) * 100) / 100)
+  const acompteNum = Math.min(reste, Math.max(0, parseEuro(acompte)))
+  const soldeRetrait = Math.max(0, Math.round((reste - acompteNum) * 100) / 100)
 
   const mutuellesDeLaPlateforme = useMemo(
     () => (settings.mutuelles || []).filter((m) => m.plateforme === plateforme),
@@ -46,6 +50,8 @@ export default function SaleForm({ type }) {
     setPlateforme(''); setMutuelleNom(''); setAutreMut(false)
     setVendor(null)
     setFacture(false)
+    setAcompte('')
+    setMethod(settings.methods[0] || 'Espèces')
     clientRef.current?.focus()
   }
 
@@ -82,7 +88,10 @@ export default function SaleForm({ type }) {
       plateforme,
       vendor,
       facture,
-      payments: [],
+      payments:
+        acompteNum > 0
+          ? [{ id: uid(), at: new Date().toISOString(), amount: acompteNum, method }]
+          : [],
     })
     reset()
     notify(estLunettes ? 'Vente lunettes enregistrée' : 'Vente lentilles enregistrée')
@@ -118,8 +127,34 @@ export default function SaleForm({ type }) {
         <div className="field">
           <label>Reste à charge (€)</label>
           <div className="input input-euro readonly-val">{euro(reste)}</div>
-          <span className="hint">Calculé (prix − mutuelle). Réglé par le client au retrait.</span>
+          <span className="hint">Calculé (prix − mutuelle).</span>
         </div>
+
+        {reste > 0 && (
+          <div className="field">
+            <label>Acompte versé aujourd'hui (€)</label>
+            <input className="input input-euro" inputMode="decimal" value={acompte}
+              onChange={(e) => setAcompte(e.target.value)} placeholder="0" />
+            <span className="hint">
+              Facultatif — ce que le client règle à la commande. Solde à encaisser au retrait : {euro(soldeRetrait)}.
+            </span>
+          </div>
+        )}
+
+        {acompteNum > 0 && (
+          <div className="field">
+            <label>Moyen de paiement de l'acompte</label>
+            <div className="seg">
+              {settings.methods.map((m) => (
+                <button type="button" key={m}
+                  className={'seg-btn' + (method === m ? ' active' : '')}
+                  onClick={() => setMethod(m)}>
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {showMutuelle && (
           <>
